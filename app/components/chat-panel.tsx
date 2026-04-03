@@ -23,13 +23,6 @@ type ChatMessage = {
   content: string;
 };
 
-const SUGGESTIONS = [
-  "现在这个位置是突破还是假突破？",
-  "把 1m/5m/15m 结构一起讲一下。",
-  "结合新闻和衍生品，说说当前风险。",
-  "如果我要等更稳的入场，应该观察什么？",
-] as const;
-
 export function ChatPanel({ symbol, interval }: ChatPanelProps) {
   const [input, setInput] = useState("");
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -106,8 +99,14 @@ export function ChatPanel({ symbol, interval }: ChatPanelProps) {
   return (
     <div className="fixed bottom-6 right-5 z-30 flex flex-col items-end gap-3">
       {isOpen && (
-        <Card className="w-[34rem] max-w-[calc(100vw-1.5rem)] border border-[#2f3a47] bg-[#121922] py-0 shadow-[0_32px_90px_rgba(0,0,0,0.55)]">
-          <CardHeader className="items-start justify-between gap-3 border-b border-white/8 px-5 py-4">
+        <Card
+          className="border border-[#2f3a47] bg-[#121922] py-0 shadow-[0_32px_90px_rgba(0,0,0,0.55)]"
+          style={{
+            width: "min(760px, calc(100vw - 24px))",
+            maxHeight: "calc(100vh - 24px)",
+          }}
+        >
+          <CardHeader className="items-center justify-between gap-3 border-b border-white/8 px-5 py-3">
             <div>
               <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-slate-500">
                 Analyst console
@@ -115,9 +114,6 @@ export function ChatPanel({ symbol, interval }: ChatPanelProps) {
               <h2 className="mt-1 text-base font-medium tracking-[-0.03em] text-[#f3eee5]">
                 {symbol} · {interval}
               </h2>
-              <p className="mt-1 text-sm text-slate-400">
-                用当前市场上下文做条件式分析，不给伪确定性结论。
-              </p>
             </div>
             <Badge
               variant="outline"
@@ -133,54 +129,29 @@ export function ChatPanel({ symbol, interval }: ChatPanelProps) {
             </Badge>
           </CardHeader>
 
-          <CardContent className="space-y-4 px-5 py-4">
-            <div className="flex flex-wrap gap-2">
-              {SUGGESTIONS.map((suggestion) => (
-                <Button
-                  key={suggestion}
-                  type="button"
-                  size="sm"
-                  variant="ghost"
-                  disabled={status === "loading"}
-                  className="h-8 rounded-full border border-white/8 bg-white/4 px-3 text-xs text-slate-300 hover:bg-white/8"
-                  onClick={() => {
-                    void submit(suggestion);
-                  }}
+          <CardContent className="flex min-h-0 flex-1 flex-col gap-3 px-5 py-4">
+            <div
+              ref={scrollRef}
+              className="min-h-0 flex-1 space-y-3 overflow-y-auto rounded-xl border border-white/8 bg-[#0d141b] p-4"
+              style={{ maxHeight: "calc(100vh - 180px)" }}
+            >
+              {messages.map((message) => (
+                <div
+                  key={message.id}
+                  className={`rounded-lg border px-3 py-3 ${
+                    message.role === "user"
+                      ? "ml-10 border-[#4f647d]/35 bg-[#17222d]"
+                      : "mr-10 border-white/8 bg-white/4"
+                  }`}
                 >
-                  {suggestion}
-                </Button>
-              ))}
-            </div>
-
-            <div ref={scrollRef} className="h-[320px] space-y-3 overflow-y-auto rounded-2xl border border-white/8 bg-[#0d141b] p-4">
-              {messages.length === 0 ? (
-                <div className="space-y-2 pt-1">
-                  <p className="text-sm text-slate-400">切到哪个币种，聊天上下文就跟到哪个币种。</p>
-                  <ul className="space-y-1.5 text-sm text-slate-500">
-                    <li>· 问走势会给条件式分析，不会装成确定预言</li>
-                    <li>· 问入场会给确认位和失效位</li>
-                    <li>· 多时间周期结构会综合对比</li>
-                  </ul>
+                  <p className="mb-1.5 text-[10px] uppercase tracking-[0.18em] text-slate-500">
+                    {message.role === "user" ? "You" : "Analyst"}
+                  </p>
+                  <p className="whitespace-pre-wrap text-sm leading-6 text-slate-100">
+                    {message.content}
+                  </p>
                 </div>
-              ) : (
-                messages.map((message) => (
-                  <div
-                    key={message.id}
-                    className={`rounded-2xl border px-3 py-3 ${
-                      message.role === "user"
-                        ? "ml-10 border-[#4f647d]/35 bg-[#17222d]"
-                        : "mr-10 border-white/8 bg-white/4"
-                    }`}
-                  >
-                    <p className="mb-1.5 text-[10px] uppercase tracking-[0.18em] text-slate-500">
-                      {message.role === "user" ? "You" : "Analyst"}
-                    </p>
-                    <p className="whitespace-pre-wrap text-sm leading-6 text-slate-100">
-                      {message.content}
-                    </p>
-                  </div>
-                ))
-              )}
+              ))}
             </div>
 
             {error ? (
@@ -200,8 +171,8 @@ export function ChatPanel({ symbol, interval }: ChatPanelProps) {
                 value={input}
                 onChange={(e) => setInput(e.currentTarget.value)}
                 placeholder={`问 ${symbol} ${interval} 的走势…`}
-                rows={3}
-                className="w-full resize-y rounded-2xl border-[#354252] bg-[#0d141b] px-3 py-3 text-sm text-slate-100 placeholder:text-slate-500"
+                rows={2}
+                className="w-full resize-y rounded-xl border-[#354252] bg-[#0d141b] px-3 py-3 text-sm text-slate-100 placeholder:text-slate-500"
                 onKeyDown={(e) => {
                   if (e.key === "Enter" && !e.shiftKey) {
                     e.preventDefault();
