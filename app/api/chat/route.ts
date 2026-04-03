@@ -1,4 +1,6 @@
+import { createUIMessageStream, createUIMessageStreamResponse, type UIMessage } from "ai";
 import { NextRequest } from "next/server";
+import { convertFullStreamChunkToUIMessageStream, convertMastraChunkToAISDKv5 } from "@mastra/core/stream";
 
 import {
   isMarketInterval,
@@ -10,7 +12,6 @@ import { mastra } from "@/src/mastra";
 
 const DEFAULT_SYMBOL: MarketSymbol = "BTCUSDT";
 const DEFAULT_INTERVAL: MarketInterval = "1m";
-const CHAT_TIMEOUT_MS = 5000;
 
 export const runtime = "nodejs";
 export const maxDuration = 30;
@@ -18,45 +19,79 @@ export const maxDuration = 30;
 export async function POST(request: NextRequest) {
   try {
     const body = (await request.json()) as {
+      messages?: UIMessage[];
       symbol?: string;
       interval?: string;
-      message?: string;
-      history?: Array<{
-        role: "user" | "assistant";
-        content: string;
-      }>;
     };
 
     const rawSymbol = body.symbol ?? "";
     const rawInterval = body.interval ?? "";
     const symbol = normalizeMarketSymbol(rawSymbol) ?? DEFAULT_SYMBOL;
     const interval = isMarketInterval(rawInterval) ? rawInterval : DEFAULT_INTERVAL;
-    const message = body.message?.trim();
-    const history = Array.isArray(body.history) ? body.history.slice(-8) : [];
+    const messages = Array.isArray(body.messages) ? body.messages : [];
 
-    if (!message) {
-      return Response.json({ error: "Message is required." }, { status: 400 });
-    }
-
-    const fallbackAnswer = buildFallbackChatAnswer({ symbol, interval, message });
-
-    if (!process.env.OPENROUTER_API_KEY) {
-      return Response.json({ answer: fallbackAnswer });
+    if (messages.length === 0) {
+      return Response.json({ error: "Messages are required." }, { status: 400 });
     }
 
     try {
       const agent = mastra.getAgentById("trading-chat");
-      const prompt = buildTradingChatPrompt({ symbol, interval, message, history });
-      const result = await Promise.race([
-        agent.generate(prompt),
-        timeoutAfter(CHAT_TIMEOUT_MS, "Trading chat timed out."),
-      ]);
-
-      return Response.json({
-        answer: result.text.trim() || fallbackAnswer,
+      const contextualMessages: UIMessage[] = [
+        buildMarketContextMessage(symbol, interval),
+        ...messages,
+      ];
+      const result = await agent.stream(contextualMessages, {
+        abortSignal: request.signal,
       });
-    } catch {
-      return Response.json({ answer: fallbackAnswer });
+      const stream = createUIMessageStream<UIMessage>({
+        originalMessages: messages,
+        onError: getErrorText,
+        execute: async ({ writer }) => {
+          const reader = result.fullStream.getReader();
+
+          try {
+            while (true) {
+              const { done, value } = await reader.read();
+
+              if (done) {
+                break;
+              }
+
+              const part = convertMastraChunkToAISDKv5({
+                chunk: value,
+                mode: "stream",
+              });
+
+              if (!part) {
+                continue;
+              }
+
+              const uiChunk = convertFullStreamChunkToUIMessageStream<UIMessage>({
+                part,
+                sendStart: true,
+                sendFinish: true,
+                sendReasoning: true,
+                onError: getErrorText,
+              });
+
+              if (uiChunk) {
+                writer.write(uiChunk);
+              }
+            }
+          } finally {
+            reader.releaseLock();
+          }
+        },
+      });
+
+      return createUIMessageStreamResponse({ stream });
+    } catch (streamError) {
+      return Response.json(
+        {
+          error: streamError instanceof Error ? streamError.message : "Chat stream failed.",
+        },
+        { status: 500 },
+      );
     }
   } catch (error) {
     return Response.json(
@@ -68,59 +103,19 @@ export async function POST(request: NextRequest) {
   }
 }
 
-function timeoutAfter(ms: number, message: string): Promise<never> {
-  return new Promise((_, reject) => {
-    setTimeout(() => {
-      reject(new Error(message));
-    }, ms);
-  });
+function getErrorText(error: unknown) {
+  return error instanceof Error ? error.message : "Chat stream failed.";
 }
 
-function buildTradingChatPrompt({
-  symbol,
-  interval,
-  message,
-  history,
-}: {
-  symbol: MarketSymbol;
-  interval: MarketInterval;
-  message: string;
-  history: Array<{
-    role: "user" | "assistant";
-    content: string;
-  }>;
-}) {
-  const historyText = history
-    .map((item) => `${item.role === "user" ? "用户" : "分析师"}: ${item.content}`)
-    .join("\n");
-
-  return `当前聊天上下文如下。
-
-市场:
-- Symbol: ${symbol}
-- Interval: ${interval}
-
-最近对话:
-${historyText || "- 无"}
-
-用户当前问题:
-${message}
-
-要求:
-- 只围绕当前选中的币种和周期回答
-- 如果用户问方向或入场，给条件式判断，不要装成确定预言
-- 如果缺少实时价格或消息，不要编造，直接说明信息边界
-- 用简洁中文回答，最多 6 句，不要复述全部上下文。`;
-}
-
-function buildFallbackChatAnswer({
-  symbol,
-  interval,
-  message,
-}: {
-  symbol: MarketSymbol;
-  interval: MarketInterval;
-  message: string;
-}) {
-  return `当前聊天绑定的是 ${symbol} ${interval}。你问的是“${message}”。在没有额外实时分析数据时，先看趋势方向、关键支撑阻力、量能配合和失效位，再决定是追单、等回踩还是先观望。`;
+function buildMarketContextMessage(symbol: MarketSymbol, interval: MarketInterval): UIMessage {
+  return {
+    id: `market-context-${symbol}-${interval}`,
+    role: "system",
+    parts: [
+      {
+        type: "text",
+        text: `当前聊天上下文如下。\n\n市场:\n- Symbol: ${symbol}\n- Interval: ${interval}\n\n要求:\n- 只围绕当前选中的币种和周期回答\n- 如果用户问方向或入场，给条件式判断，不要装成确定预言\n- 如果缺少实时价格或消息，不要编造，直接说明信息边界\n- 用简洁中文回答，优先短句，不要复述全部上下文。`,
+      },
+    ],
+  }
 }

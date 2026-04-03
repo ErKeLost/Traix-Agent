@@ -403,9 +403,6 @@ export function TradingTerminal() {
         </Button>
 
         <div className="pointer-events-auto flex flex-col items-end gap-2">
-          <div className="rounded-full border border-white/10 bg-[#121922]/84 px-3 py-1 text-[10px] uppercase tracking-[0.24em] text-slate-500 shadow-[0_12px_40px_rgba(0,0,0,0.24)] backdrop-blur-xl">
-            Window & execution zoom
-          </div>
           <div className="flex items-center rounded-[24px] border border-white/10 bg-[#121922]/90 p-2 shadow-[0_18px_60px_rgba(0,0,0,0.34)] backdrop-blur-xl">
           <ToggleGroup
             type="single"

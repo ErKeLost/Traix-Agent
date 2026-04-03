@@ -1,15 +1,41 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
+import { useChat } from "@ai-sdk/react";
+import { DefaultChatTransport, type UIMessage } from "ai";
+import { CopyIcon, GlobeIcon, MessageSquareIcon, SparklesIcon } from "lucide-react";
 
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import {
-  Card,
-  CardContent,
-  CardHeader,
-} from "@/components/ui/card";
-import { Textarea } from "@/components/ui/textarea";
+  Conversation,
+  ConversationContent,
+  ConversationEmptyState,
+  ConversationScrollButton,
+} from "@/components/ai-elements/conversation";
+import {
+  Message,
+  MessageAction,
+  MessageActions,
+  MessageContent,
+  MessageResponse,
+} from "@/components/ai-elements/message";
+import {
+  PromptInput,
+  PromptInputButton,
+  PromptInputBody,
+  PromptInputFooter,
+  PromptInputProvider,
+  PromptInputStop,
+  PromptInputSubmit,
+  PromptInputTextarea,
+  PromptInputTools,
+} from "@/components/ai-elements/prompt-input";
+import {
+  Reasoning,
+  ReasoningContent,
+  ReasoningTrigger,
+} from "@/components/ai-elements/reasoning";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import type { MarketInterval, MarketSymbol } from "@/lib/market";
 
 type ChatPanelProps = {
@@ -17,96 +43,62 @@ type ChatPanelProps = {
   interval: MarketInterval;
 };
 
-type ChatMessage = {
-  id: string;
-  role: "user" | "assistant";
-  content: string;
-};
+const QUICK_PROMPTS = [
+  "这个位置先追还是等回踩？",
+  "给我看一下短线支撑阻力",
+  "现在的失效位在哪里？",
+  "量能和结构配合怎么样？",
+];
 
 export function ChatPanel({ symbol, interval }: ChatPanelProps) {
   const [input, setInput] = useState("");
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [status, setStatus] = useState<"ready" | "loading" | "error">("ready");
-  const [error, setError] = useState<string | null>(null);
   const [isOpen, setIsOpen] = useState(false);
-  const scrollRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (isOpen && scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-    }
-  }, [messages, isOpen]);
+  const [useSearch, setUseSearch] = useState(false);
+  const chatId = `trading-chat-${symbol}-${interval}`;
+  const { clearError, error, messages, sendMessage, status, stop } = useChat({
+    id: chatId,
+    transport: new DefaultChatTransport({
+      api: "/api/chat",
+    }),
+  });
 
   async function submit(text: string) {
     const content = text.trim();
 
-    if (!content || status === "loading") {
+    if (!content || status === "submitted" || status === "streaming") {
       return;
     }
 
-    const nextUserMessage: ChatMessage = {
-      id: `${Date.now()}-user`,
-      role: "user",
-      content,
-    };
-
     setInput("");
-    setError(null);
-    setStatus("loading");
-    setMessages((current) => [...current, nextUserMessage]);
-
-    try {
-      const response = await fetch("/api/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
+    clearError();
+    await sendMessage(
+      { text: content },
+      {
+        body: {
           symbol,
           interval,
-          message: content,
-          history: messages.slice(-6).map((item) => ({
-            role: item.role,
-            content: item.content,
-          })),
-        }),
-      });
-
-      const payload = (await response.json()) as {
-        answer?: string;
-        error?: string;
-      };
-
-      if (!response.ok) {
-        throw new Error(payload.error ?? "Chat request failed.");
-      }
-
-      setMessages((current) => [
-        ...current,
-        {
-          id: `${Date.now()}-assistant`,
-          role: "assistant",
-          content: payload.answer ?? "没有拿到有效回复。",
         },
-      ]);
-      setStatus("ready");
-    } catch (requestError) {
-      setStatus("error");
-      setError(
-        requestError instanceof Error ? requestError.message : "Chat request failed.",
-      );
-    }
+      },
+    );
+  }
+
+  const isStreaming = status === "submitted" || status === "streaming";
+
+  function submitQuickPrompt(prompt: string) {
+    void submit(prompt);
   }
 
   return (
     <div className="fixed bottom-6 right-5 z-30 flex flex-col items-end gap-3">
       {isOpen && (
-        <Card
-          className="border border-[#2f3a47] bg-[#121922] py-0 shadow-[0_32px_90px_rgba(0,0,0,0.55)]"
+        <div
+          className="flex min-h-0 flex-col overflow-hidden rounded-[28px] border border-white/10 bg-[linear-gradient(180deg,#131a24_0%,#101720_100%)] shadow-[0_36px_100px_rgba(0,0,0,0.5)]"
           style={{
             width: "min(760px, calc(100vw - 24px))",
             maxHeight: "calc(100vh - 24px)",
           }}
         >
-          <CardHeader className="items-center justify-between gap-3 border-b border-white/8 px-5 py-3">
+          <div className="flex items-center justify-between gap-3 border-b border-white/8 px-5 py-3">
             <div>
               <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-slate-500">
                 Analyst console
@@ -118,80 +110,107 @@ export function ChatPanel({ symbol, interval }: ChatPanelProps) {
             <Badge
               variant="outline"
               className={`border px-2.5 py-1 text-[10px] uppercase tracking-[0.18em] ${
-                status === "loading"
+                isStreaming
                   ? "border-[#536982] bg-[#1c2835] text-[#a9bdd3]"
-                  : status === "error"
+                  : error
                     ? "border-amber-500/20 bg-amber-500/10 text-amber-200"
                     : "border-white/8 bg-white/5 text-slate-400"
               }`}
             >
-              {status === "loading" ? "Thinking" : status === "error" ? "Error" : "Ready"}
+              {isStreaming ? "Streaming" : error ? "Error" : "Ready"}
             </Badge>
-          </CardHeader>
+          </div>
 
-          <CardContent className="flex min-h-0 flex-1 flex-col gap-3 px-5 py-4">
-            <div
-              ref={scrollRef}
-              className="min-h-0 flex-1 space-y-3 overflow-y-auto rounded-xl border border-white/8 bg-[#0d141b] p-4"
-              style={{ maxHeight: "calc(100vh - 180px)" }}
-            >
-              {messages.map((message) => (
-                <div
-                  key={message.id}
-                  className={`rounded-lg border px-3 py-3 ${
-                    message.role === "user"
-                      ? "ml-10 border-[#4f647d]/35 bg-[#17222d]"
-                      : "mr-10 border-white/8 bg-white/4"
-                  }`}
-                >
-                  <p className="mb-1.5 text-[10px] uppercase tracking-[0.18em] text-slate-500">
-                    {message.role === "user" ? "You" : "Analyst"}
-                  </p>
-                  <p className="whitespace-pre-wrap text-sm leading-6 text-slate-100">
-                    {message.content}
-                  </p>
-                </div>
-              ))}
+          <div className="flex min-h-0 flex-1 flex-col gap-4 px-4 py-4">
+            <div className="min-h-0 flex-1" style={{ maxHeight: "calc(100vh - 180px)" }}>
+              <PromptInputProvider>
+                <Conversation className="size-full">
+                  <ConversationContent>
+                    {messages.length === 0 ? (
+                      <ConversationEmptyState
+                        icon={<MessageSquareIcon className="size-6" />}
+                        title={`${symbol} ${interval} analyst stream`}
+                        description="问方向、结构、失效位或交易计划，回复会按流式逐段出来。"
+                      />
+                    ) : (
+                      messages.map((message, index) => (
+                        <ChatMessageItem
+                          key={message.id}
+                          isLastMessage={index === messages.length - 1}
+                          isStreaming={isStreaming}
+                          message={message}
+                        />
+                      ))
+                    )}
+                  </ConversationContent>
+                  <ConversationScrollButton />
+                </Conversation>
+              </PromptInputProvider>
             </div>
 
             {error ? (
               <p className="rounded-xl border border-amber-500/20 bg-amber-500/8 px-3 py-2 text-sm text-amber-300">
-                {error}
+                {error.message}
               </p>
             ) : null}
 
-            <form
+            {messages.length === 0 ? (
+              <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1">
+                {QUICK_PROMPTS.map((prompt) => (
+                  <button
+                    key={prompt}
+                    type="button"
+                    onClick={() => submitQuickPrompt(prompt)}
+                    className="shrink-0 rounded-full border border-white/10 bg-white/[0.03] px-3 py-2 text-sm text-slate-300 transition-colors hover:border-[#8b7143]/40 hover:bg-[#1a2230] hover:text-[#f3eee5]"
+                  >
+                    {prompt}
+                  </button>
+                ))}
+              </div>
+            ) : null}
+
+            <PromptInput
               onSubmit={(e) => {
                 e.preventDefault();
                 void submit(input);
               }}
-              className="space-y-2"
             >
-              <Textarea
-                value={input}
-                onChange={(e) => setInput(e.currentTarget.value)}
-                placeholder={`问 ${symbol} ${interval} 的走势…`}
-                rows={2}
-                className="w-full resize-y rounded-xl border-[#354252] bg-[#0d141b] px-3 py-3 text-sm text-slate-100 placeholder:text-slate-500"
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" && !e.shiftKey) {
-                    e.preventDefault();
-                    void submit(input);
-                  }
-                }}
-              />
-              <div className="flex justify-end">
-                <Button
-                  type="submit"
-                  className="rounded-full bg-[#c9a05e] px-5 text-[#11161d] hover:bg-[#d3ab6d]"
-                  disabled={!input.trim() || status === "loading"}
-                >
-                  发送
-                </Button>
-              </div>
-            </form>
-          </CardContent>
-        </Card>
+              <PromptInputBody>
+                <PromptInputTextarea
+                  value={input}
+                  onChange={(e) => setInput(e.currentTarget.value)}
+                  placeholder={`问 ${symbol} ${interval} 的走势…`}
+                  className="pr-4"
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && !e.shiftKey) {
+                      e.preventDefault();
+                      void submit(input);
+                    }
+                  }}
+                />
+              </PromptInputBody>
+              <PromptInputFooter>
+                <PromptInputTools>
+                  <PromptInputButton
+                    className={useSearch ? "border-white/10 bg-white/[0.06] text-slate-100" : undefined}
+                    onClick={() => setUseSearch((value) => !value)}
+                  >
+                    <GlobeIcon className="size-4" />
+                    <span>Search</span>
+                  </PromptInputButton>
+                  <PromptInputButton className="text-slate-300">
+                    <SparklesIcon className="size-4" />
+                    <span>Trading Analyst</span>
+                  </PromptInputButton>
+                </PromptInputTools>
+                <div className="flex items-center gap-2 self-end">
+                  {isStreaming ? <PromptInputStop onClick={() => stop()} aria-label="停止输出" /> : null}
+                  <PromptInputSubmit status={status} disabled={!input.trim() || isStreaming} />
+                </div>
+              </PromptInputFooter>
+            </PromptInput>
+          </div>
+        </div>
       )}
 
       <Button
@@ -219,5 +238,59 @@ export function ChatPanel({ symbol, interval }: ChatPanelProps) {
         </span>
       </Button>
     </div>
+  );
+}
+
+function ChatMessageItem({
+  message,
+  isLastMessage,
+  isStreaming,
+}: {
+  message: UIMessage;
+  isLastMessage: boolean;
+  isStreaming: boolean;
+}) {
+  const reasoningText = message.parts
+    .filter((part) => part.type === "reasoning")
+    .map((part) => part.text)
+    .join("\n\n");
+  const textParts = message.parts.filter((part) => part.type === "text");
+  const showReasoning = message.role === "assistant" && reasoningText.length > 0;
+  const isReasoningStreaming =
+    showReasoning &&
+    isLastMessage &&
+    isStreaming &&
+    message.parts.at(-1)?.type === "reasoning";
+  const assistantText = textParts.map((part) => part.text).join("\n\n");
+
+  return (
+    <Message from={message.role}>
+      <MessageContent>
+        <p className="mb-1.5 text-[10px] uppercase tracking-[0.18em] text-slate-500">
+          {message.role === "user" ? "You" : message.role === "assistant" ? "Analyst" : "System"}
+        </p>
+        {showReasoning ? (
+          <Reasoning className="mb-3" isStreaming={isReasoningStreaming}>
+            <ReasoningTrigger />
+            <ReasoningContent>{reasoningText}</ReasoningContent>
+          </Reasoning>
+        ) : null}
+        {textParts.map((part, index) => (
+          <MessageResponse key={`${message.id}-${index}`}>{part.text}</MessageResponse>
+        ))}
+      </MessageContent>
+      {message.role === "assistant" && assistantText ? (
+        <MessageActions>
+          <MessageAction
+            aria-label="复制回复"
+            onClick={() => {
+              void navigator.clipboard.writeText(assistantText)
+            }}
+          >
+            <CopyIcon className="size-3.5" />
+          </MessageAction>
+        </MessageActions>
+      ) : null}
+    </Message>
   );
 }
