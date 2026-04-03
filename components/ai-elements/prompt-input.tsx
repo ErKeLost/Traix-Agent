@@ -21,7 +21,7 @@ function PromptInput({ className, ...props }: React.ComponentProps<"form">) {
   return (
     <form
       className={cn(
-        "rounded-[22px] border border-[#8b7143]/40 bg-[linear-gradient(180deg,#171d27_0%,#111821_100%)] p-2 shadow-[0_18px_48px_rgba(0,0,0,0.28)]",
+        "overflow-hidden rounded-[26px] border border-white/10 bg-[linear-gradient(180deg,#121922_0%,#0f151d_100%)] shadow-[0_22px_52px_rgba(0,0,0,0.34)]",
         className,
       )}
       {...props}
@@ -34,7 +34,7 @@ function PromptInputBody({ className, ...props }: React.ComponentProps<"div">) {
 }
 
 function PromptInputFooter({ className, ...props }: React.ComponentProps<"div">) {
-  return <div className={cn("mt-1 flex items-center justify-between gap-3 px-2 pb-1", className)} {...props} />
+  return <div className={cn("flex items-center justify-between gap-3 border-t border-white/8 px-3 py-3", className)} {...props} />
 }
 
 function PromptInputTools({ className, ...props }: React.ComponentProps<"div">) {
@@ -48,7 +48,7 @@ function PromptInputButton({ className, ...props }: React.ComponentProps<typeof 
       variant="ghost"
       size="sm"
       className={cn(
-        "rounded-full border border-transparent px-3 text-slate-400 hover:border-white/10 hover:bg-white/[0.04] hover:text-slate-100",
+        "rounded-full border border-white/8 bg-white/[0.03] px-3 text-slate-400 hover:border-[#8b7143]/30 hover:bg-[#18212c] hover:text-slate-100",
         className,
       )}
       {...props}
@@ -60,7 +60,7 @@ function PromptInputTextarea({ className, ...props }: React.ComponentProps<typeo
   return (
     <Textarea
       className={cn(
-        "min-h-[108px] resize-none border-0 bg-transparent px-4 py-4 text-[15px] leading-7 text-slate-100 placeholder:text-slate-500 focus-visible:ring-0 focus-visible:outline-none",
+        "min-h-[112px] resize-none border-0 bg-transparent px-5 py-4 text-[15px] leading-7 text-slate-100 placeholder:text-slate-500 focus-visible:ring-0 focus-visible:outline-none",
         className,
       )}
       {...props}
@@ -83,7 +83,7 @@ function PromptInputSubmit({
       type="submit"
       size="icon"
       className={cn(
-        "size-10 rounded-2xl bg-[#c9a05e] text-[#11161d] shadow-[0_8px_24px_rgba(201,160,94,0.28)] hover:bg-[#d3ab6d]",
+        "size-11 rounded-full bg-[#c9a05e] text-[#11161d] shadow-[0_8px_24px_rgba(201,160,94,0.28)] hover:bg-[#d3ab6d]",
         className,
       )}
       {...props}
@@ -99,7 +99,7 @@ function PromptInputStop({ className, ...props }: React.ComponentProps<typeof Bu
       type="button"
       variant="outline"
       size="sm"
-      className={cn("rounded-full border-white/10 bg-transparent px-3 text-slate-300", className)}
+      className={cn("rounded-full border-white/10 bg-transparent px-3 text-slate-300 hover:bg-white/[0.04]", className)}
       {...props}
     >
       <SquareIcon className="size-3.5 fill-current" />

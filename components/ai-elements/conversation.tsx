@@ -73,12 +73,12 @@ function ConversationContent({ className, children, ...props }: React.ComponentP
       ref={viewportRef}
       onScroll={handleScroll}
       className={cn(
-        "min-h-0 flex-1 overflow-y-auto bg-[#0d141b] px-2 py-2",
+        "min-h-0 flex-1 overflow-y-auto bg-[linear-gradient(180deg,#0b1117_0%,#0a1015_100%)] px-3 py-3",
         className,
       )}
       {...props}
     >
-      <div className="flex min-h-full flex-col justify-end gap-3">{children}</div>
+      <div className="flex min-h-full flex-col justify-end gap-4">{children}</div>
     </div>
   )
 }
@@ -98,14 +98,14 @@ function ConversationEmptyState({
   return (
     <div
       className={cn(
-        "flex min-h-[280px] flex-col items-center justify-center px-6 py-10 text-center",
+        "flex min-h-[320px] flex-col items-center justify-center px-6 py-10 text-center",
         className,
       )}
       {...props}
     >
-      {icon ? <div className="mb-4 text-slate-500">{icon}</div> : null}
+      {icon ? <div className="mb-4 text-[#8b7143]">{icon}</div> : null}
       <p className="text-sm font-medium tracking-[-0.02em] text-[#f3eee5]">{title}</p>
-      {description ? <p className="mt-2 max-w-sm text-sm leading-6 text-slate-500">{description}</p> : null}
+      {description ? <p className="mt-2 max-w-md text-sm leading-6 text-slate-500">{description}</p> : null}
       {children}
     </div>
   )

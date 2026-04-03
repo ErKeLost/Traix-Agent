@@ -26,7 +26,7 @@ function Message({ from, className, children, ...props }: React.ComponentProps<"
     <MessageContext.Provider value={{ from }}>
       <div
         className={cn(
-          "group/message flex w-full flex-col gap-2",
+          "group/message flex w-full flex-col gap-1.5",
           from === "user" ? "items-end" : "items-start",
           className,
         )}
@@ -44,10 +44,10 @@ function MessageContent({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
       className={cn(
-        "w-full max-w-[92%] px-3 py-3",
+        "w-full px-3 py-2.5",
         from === "user"
-          ? "rounded-2xl rounded-br-md border border-[#8b7143]/25 bg-[#192230] text-slate-100 shadow-[0_8px_24px_rgba(0,0,0,0.12)] sm:ml-10"
-          : "text-slate-100 sm:mr-10",
+          ? "max-w-[82%] rounded-[22px] rounded-br-md border border-[#8b7143]/24 bg-[linear-gradient(180deg,#18222e_0%,#141c26_100%)] text-slate-100 shadow-[0_14px_28px_rgba(0,0,0,0.14)] sm:ml-16"
+          : "max-w-[94%] border-l border-[#8b7143]/20 pl-4 text-slate-100 sm:mr-12",
         className,
       )}
       {...props}
@@ -56,11 +56,11 @@ function MessageContent({ className, ...props }: React.ComponentProps<"div">) {
 }
 
 function MessageResponse({ className, ...props }: React.ComponentProps<"div">) {
-  return <div className={cn("whitespace-pre-wrap break-words text-sm leading-6", className)} {...props} />
+  return <div className={cn("whitespace-pre-wrap break-words text-[14px] leading-6 text-[color:color-mix(in_oklab,#eef2f7_88%,#8fa0b4)]", className)} {...props} />
 }
 
 function MessageActions({ className, ...props }: React.ComponentProps<"div">) {
-  return <div className={cn("flex items-center gap-1", className)} {...props} />
+  return <div className={cn("flex items-center gap-1 pl-4", className)} {...props} />
 }
 
 function MessageAction({ className, ...props }: React.ComponentProps<typeof Button>) {
