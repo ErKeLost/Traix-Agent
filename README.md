@@ -1,33 +1,48 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+## Trading Terminal
+
+Binance public market data terminal built with Next.js 16 and `lightweight-charts`.
+
+## Environment
+
+Public market data does not require a Binance API key.
+
+If you later want to add private account data or order placement, create a local env file:
+
+```bash
+cp .env.example .env.local
+```
+
+Then fill in:
+
+```bash
+BINANCE_API_KEY=your_api_key
+BINANCE_SECRET_KEY=your_secret_key
+```
+
+Keep `BINANCE_SECRET_KEY` on the server only. Do not expose it to client-side code.
 
 ## Getting Started
 
-First, run the development server:
+First, run the development server with Bun:
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
 bun dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+This app currently uses Binance public REST and WebSocket market data only.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Binance API key
 
-## Learn More
+You only need a key for:
 
-To learn more about Next.js, take a look at the following resources:
+- account balances
+- open orders
+- trade history
+- order placement and cancellation
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Create it from your Binance account's `API Management` page, then put it in `.env.local`.
 
 ## Deploy on Vercel
 
