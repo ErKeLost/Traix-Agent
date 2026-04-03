@@ -1,8 +1,16 @@
 "use client";
 
-import { Button, Card, Input, ScrollShadow, Spinner } from "@heroui/react";
 import { startTransition, useEffect, useRef, useState } from "react";
 
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+} from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Spinner } from "@/components/ui/spinner";
 import { MARKET_SYMBOLS, normalizeMarketSymbol, type MarketSymbol } from "@/lib/market";
 
 type MarketSelectorProps = {
@@ -89,20 +97,23 @@ export function MarketSelector({ open, symbol, onSymbolChange, onClose }: Market
   const listItems = query.trim() ? results : FAVORITES;
 
   return (
-    <div className="fixed inset-0 z-40 bg-black/55 backdrop-blur-sm" onClick={onClose}>
+    <div className="fixed inset-0 z-40 bg-[#081016]/72 backdrop-blur-md" onClick={onClose}>
       <Card
-        className="absolute left-1/2 top-[10vh] w-[min(640px,94vw)] -translate-x-1/2 border border-white/10 bg-[#081526] text-white shadow-[0_24px_60px_rgba(0,0,0,0.45)]"
+        className="absolute left-1/2 top-[8vh] w-[min(760px,94vw)] -translate-x-1/2 border border-[#2f3a47] bg-[#121922] py-0 text-white shadow-[0_32px_90px_rgba(0,0,0,0.52)]"
         onClick={(event) => event.stopPropagation()}
       >
-        <Card.Header className="items-start justify-between border-b border-white/10 px-4 py-3">
+        <CardHeader className="items-start justify-between border-b border-white/8 px-5 py-4">
           <div className="w-full space-y-2.5">
             <div className="flex items-center justify-between">
-              <span className="text-[11px] uppercase tracking-widest text-slate-500">Markets</span>
+              <div>
+                <p className="text-[10px] uppercase tracking-[0.24em] text-slate-500">Market directory</p>
+                <h2 className="mt-1 text-lg font-medium tracking-[-0.03em] text-[#f3eee5]">切换交易标的</h2>
+              </div>
               <Button
-                isIconOnly
-                size="sm"
-                variant="light"
-                className="text-slate-400"
+                type="button"
+                size="icon-sm"
+                variant="ghost"
+                className="rounded-full border border-white/10 text-slate-400 hover:bg-white/6"
                 onClick={onClose}
                 aria-label="关闭搜索"
               >
@@ -111,13 +122,16 @@ export function MarketSelector({ open, symbol, onSymbolChange, onClose }: Market
                 </svg>
               </Button>
             </div>
+            <p className="text-sm leading-6 text-slate-400">
+              直接搜索符号，或者从常用交易对里快速切换。所有分析上下文会同步跟随当前市场。
+            </p>
             <div className="relative">
               <svg className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="m21 21-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z" />
               </svg>
               {loading ? (
                 <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2">
-                  <Spinner size="sm" color="default" />
+                  <Spinner className="size-4 text-slate-400" />
                 </span>
               ) : null}
               <Input
@@ -125,7 +139,7 @@ export function MarketSelector({ open, symbol, onSymbolChange, onClose }: Market
                 value={query}
                 onChange={(event) => setQuery(event.currentTarget.value.toUpperCase())}
                 placeholder="搜索币种，如 BTC、XRPUSDT…"
-                className="w-full rounded-xl border border-white/10 bg-white/5 pl-9 pr-9 text-slate-100 placeholder:text-slate-500"
+                className="h-11 w-full rounded-2xl border-[#354252] bg-[#0d141b] pl-9 pr-9 text-slate-100 placeholder:text-slate-500"
                 onKeyDown={(e) => {
                   if (e.key === "Enter") {
                     const first = listItems[0];
@@ -138,45 +152,49 @@ export function MarketSelector({ open, symbol, onSymbolChange, onClose }: Market
               />
             </div>
           </div>
-        </Card.Header>
-        <Card.Content className="px-3 pb-3 pt-2">
-          <ScrollShadow className="max-h-[56vh] space-y-2 pr-1">
-            {!query.trim() ? (
-              <p className="px-2 pb-1 text-[10px] font-semibold uppercase tracking-widest text-slate-500">
-                常用币种
-              </p>
-            ) : null}
-            {listItems.length === 0 && !loading ? (
-              <p className="px-2 py-6 text-center text-sm text-slate-500">没有找到匹配的币种</p>
-            ) : (
-              listItems.map((item) => {
-                const active = item.symbol === symbol;
+        </CardHeader>
+        <CardContent className="px-3 pb-3 pt-2">
+          <ScrollArea className="max-h-[56vh] pr-1">
+            <div className="space-y-2 pr-2">
+              {!query.trim() ? (
+                <p className="px-2 pb-1 text-[10px] font-semibold uppercase tracking-[0.22em] text-slate-500">
+                  常用币种
+                </p>
+              ) : null}
+              {listItems.length === 0 && !loading ? (
+                <p className="px-2 py-6 text-center text-sm text-slate-500">没有找到匹配的币种</p>
+              ) : (
+                <div className="grid gap-2 md:grid-cols-2">
+                  {listItems.map((item) => {
+                  const active = item.symbol === symbol;
 
-                return (
-                  <Button
-                    key={item.symbol}
-                    fullWidth
-                    variant={active ? "primary" : "ghost"}
-                    className={`h-auto justify-start rounded-xl px-3 py-2.5 ${
-                      active
-                        ? "bg-emerald-500/15 text-white"
-                        : "text-slate-300 hover:bg-white/8 hover:text-white"
-                    }`}
-                    onClick={() => select(item.symbol)}
-                  >
-                    <div className="w-full text-left">
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm font-semibold">{item.base}</span>
-                        <span className="text-[10px] text-slate-500">{item.quote}</span>
+                  return (
+                    <Button
+                      key={item.symbol}
+                      type="button"
+                      variant={active ? "secondary" : "ghost"}
+                      className={`h-auto w-full justify-start rounded-2xl border px-3 py-3 ${
+                        active
+                          ? "border-[#4f647d] bg-[#1b2631] text-white"
+                          : "border-white/6 text-slate-300 hover:bg-white/6 hover:text-white"
+                      }`}
+                      onClick={() => select(item.symbol)}
+                    >
+                      <div className="w-full text-left">
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm font-semibold">{item.base}</span>
+                          <span className="rounded-full border border-white/8 px-2 py-0.5 text-[10px] uppercase tracking-[0.16em] text-slate-500">{item.quote}</span>
+                        </div>
+                        <p className="mt-1 text-[11px] text-slate-500">{item.symbol}</p>
                       </div>
-                      <p className="text-[11px] text-slate-500">{item.symbol}</p>
-                    </div>
-                  </Button>
-                );
-              })
-            )}
-          </ScrollShadow>
-        </Card.Content>
+                    </Button>
+                  );
+                })}
+                </div>
+              )}
+            </div>
+          </ScrollArea>
+        </CardContent>
       </Card>
     </div>
   );

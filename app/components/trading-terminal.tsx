@@ -1,8 +1,10 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { Button, ToggleButton, ToggleButtonGroup } from "@heroui/react";
 import { useEffect, useMemo, useRef, useState } from "react";
+
+import { Button } from "@/components/ui/button";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 
 import {
   INTERVALS,
@@ -10,6 +12,7 @@ import {
   type MarketPayload,
   type MarketSymbol,
 } from "@/lib/market";
+import { formatPercent, formatPrice } from "./shared/format";
 
 import { CandlestickChart } from "./candlestick-chart";
 import { IntervalSelector } from "./interval-selector";
@@ -43,12 +46,17 @@ export function TradingTerminal() {
 
   // 实时 tick 直接调用 chart 的 update()，完全绕过 React state，避免每秒全量 setData
   const chartUpdateRef = useRef<((candle: Candle) => void) | null>(null);
+  const candlesRef = useRef<Candle[]>([]);
+
+  useEffect(() => {
+    candlesRef.current = candles;
+  }, [candles]);
 
   useEffect(() => {
     let cancelled = false;
 
     async function loadCandles() {
-      setStatus((current) => (candles.length === 0 ? "loading" : current));
+      setStatus((current) => (candlesRef.current.length === 0 ? "loading" : current));
       setErrorMessage(null);
 
       try {
@@ -280,13 +288,43 @@ export function TradingTerminal() {
   }, [symbol, interval]);
 
   const displaySymbol = useMemo(() => formatDisplaySymbol(symbol), [symbol]);
+  const marketSnapshot = useMemo(() => {
+    const first = candles[0];
+    const last = candles.at(-1);
+
+    if (!first || !last) {
+      return {
+        priceLabel: "--",
+        changeLabel: "0.00%",
+        changeTone: "text-slate-500",
+      };
+    }
+
+    const delta = first.open > 0
+      ? ((last.close - first.open) / first.open) * 100
+      : 0;
+
+    return {
+      priceLabel: formatPrice(last.close),
+      changeLabel: formatPercent(delta),
+      changeTone:
+        delta > 0
+          ? "text-emerald-300"
+          : delta < 0
+            ? "text-rose-300"
+            : "text-slate-400",
+    };
+  }, [candles]);
   const [searchOpen, setSearchOpen] = useState(false);
 
-  const selectedTimeRange = useMemo(() => new Set([timeRange]), [timeRange]);
-
   return (
-    <div className="fixed inset-0 overflow-hidden bg-[#08111f]">
-      {/* Full-screen chart */}
+    <div className="fixed inset-0 overflow-hidden bg-[#0f141a]">
+      <div className="pointer-events-none absolute inset-0">
+        <div className="absolute left-[-12%] top-[-10%] h-[28rem] w-[28rem] rounded-full bg-[radial-gradient(circle,rgba(201,160,94,0.16),transparent_58%)] blur-3xl" />
+        <div className="absolute right-[-8%] top-[2%] h-[34rem] w-[34rem] rounded-full bg-[radial-gradient(circle,rgba(109,143,179,0.18),transparent_62%)] blur-3xl" />
+        <div className="absolute inset-x-0 top-0 h-40 bg-gradient-to-b from-black/26 to-transparent" />
+      </div>
+
       <div className="absolute inset-0">
         <CandlestickChart
           key={symbol}
@@ -298,77 +336,108 @@ export function TradingTerminal() {
         />
       </div>
 
-      {/* Top overlay bar */}
-      <div className="pointer-events-none absolute inset-x-0 top-0 z-10 flex items-center justify-between gap-3 bg-gradient-to-b from-[#08111f]/95 via-[#08111f]/60 to-transparent px-4 pb-6 pt-3">
-        {/* Left: symbol + status */}
+      <div className="pointer-events-none absolute inset-x-0 top-0 z-10 flex items-start justify-between gap-4 px-4 pb-10 pt-4">
         <Button
           variant="secondary"
-          className="pointer-events-auto h-auto min-w-0 justify-start gap-2.5 rounded-xl bg-white/5 px-3 py-2 text-left transition-colors hover:bg-white/10"
+          className="pointer-events-auto h-auto min-w-[18rem] justify-start rounded-[24px] border border-white/10 bg-[#121922]/92 px-4 py-3 text-left text-[#f2ede4] shadow-[0_18px_60px_rgba(0,0,0,0.34)] backdrop-blur-xl transition-colors hover:bg-[#18202a]"
           onClick={() => setSearchOpen(true)}
         >
-          <span className="text-base font-bold text-white">{displaySymbol}</span>
-          <span
-            suppressHydrationWarning
-            className={`inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[10px] font-medium uppercase tracking-widest ${
-              status === "live"
-                ? "bg-emerald-500/15 text-emerald-300"
-                : status === "error"
-                  ? "bg-amber-500/15 text-amber-300"
-                  : "bg-white/8 text-slate-400"
-            }`}
-          >
-            <span
-              suppressHydrationWarning
-              className={`h-1.5 w-1.5 rounded-full ${
-                status === "live"
-                  ? "bg-emerald-400"
-                  : status === "error"
-                    ? "bg-amber-400"
-                    : "bg-slate-500"
-              }`}
-            />
-            {statusLabel(status)}
-          </span>
-          <svg className="h-3 w-3 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="m21 21-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z" />
-          </svg>
+          <div className="flex w-full items-start justify-between gap-5">
+            <div className="space-y-1.5">
+              <div className="flex items-center gap-2">
+                <span className="rounded-full border border-[#3c4a5c] bg-[#1c2530] px-2 py-0.5 text-[10px] font-medium uppercase tracking-[0.26em] text-[#c9a05e]">
+                  Desk
+                </span>
+                <span className="text-[10px] uppercase tracking-[0.2em] text-slate-500">
+                  Binance market stream
+                </span>
+              </div>
+              <div className="flex items-end gap-3">
+                <span className="text-2xl font-semibold tracking-[-0.04em] text-[#f3eee5]">
+                  {displaySymbol}
+                </span>
+                <span className="pb-0.5 text-[11px] uppercase tracking-[0.18em] text-slate-500">
+                  Switch
+                </span>
+              </div>
+              <div className="flex items-center gap-3">
+                <span className="font-mono text-sm text-slate-200 tabular-nums">
+                  {marketSnapshot.priceLabel}
+                </span>
+                <span className={`text-xs font-semibold ${marketSnapshot.changeTone}`}>
+                  {marketSnapshot.changeLabel}
+                </span>
+              </div>
+            </div>
+
+            <div className="flex flex-col items-end gap-2">
+              <span
+                suppressHydrationWarning
+                className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[10px] font-medium uppercase tracking-[0.22em] ${
+                  status === "live"
+                    ? "border-emerald-500/25 bg-emerald-500/12 text-emerald-200"
+                    : status === "error"
+                      ? "border-amber-500/25 bg-amber-500/12 text-amber-200"
+                      : "border-white/8 bg-white/5 text-slate-400"
+                }`}
+              >
+                <span
+                  suppressHydrationWarning
+                  className={`h-1.5 w-1.5 rounded-full ${
+                    status === "live"
+                      ? "bg-emerald-400"
+                      : status === "error"
+                        ? "bg-amber-400"
+                        : "bg-slate-500"
+                  }`}
+                />
+                {statusLabel(status)}
+              </span>
+              <span className="flex h-8 w-8 items-center justify-center rounded-full border border-white/8 bg-black/10 text-slate-500">
+                <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="m21 21-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z" />
+                </svg>
+              </span>
+            </div>
+          </div>
         </Button>
 
-        {/* Right: time range + interval in one connected bar */}
-        <div className="pointer-events-auto flex items-center rounded-lg border border-white/15 bg-[#0f1c31]/80 p-1">
-          <ToggleButtonGroup
-            size="sm"
-            selectionMode="single"
-            selectedKeys={selectedTimeRange}
-            onSelectionChange={(keys) => {
-              const next =
-                keys instanceof Set ? Array.from(keys)[0] : keys;
-
-              if (typeof next === "string") {
-                setTimeRange(next as TimeRangeKey);
+        <div className="pointer-events-auto flex flex-col items-end gap-2">
+          <div className="rounded-full border border-white/10 bg-[#121922]/84 px-3 py-1 text-[10px] uppercase tracking-[0.24em] text-slate-500 shadow-[0_12px_40px_rgba(0,0,0,0.24)] backdrop-blur-xl">
+            Window & execution zoom
+          </div>
+          <div className="flex items-center rounded-[24px] border border-white/10 bg-[#121922]/90 p-2 shadow-[0_18px_60px_rgba(0,0,0,0.34)] backdrop-blur-xl">
+          <ToggleGroup
+            type="single"
+            value={timeRange}
+            onValueChange={(value) => {
+              if (value) {
+                setTimeRange(value as TimeRangeKey);
               }
             }}
+            size="sm"
+            variant="default"
+            spacing={0}
+            className="rounded-[18px] bg-black/10"
           >
-            {RANGE_OPTIONS.map((item, index) => (
-              <ToggleButton
+            {RANGE_OPTIONS.map((item) => (
+              <ToggleGroupItem
                 key={item.key}
-                id={item.key}
-                variant="ghost"
-                className="h-7 min-w-0 rounded-md px-2.5 text-xs text-slate-300"
+                value={item.key}
+                className="h-8 min-w-0 px-3 text-[11px] font-medium tracking-[0.04em] text-slate-400 data-[state=on]:bg-[#2f3843] data-[state=on]:text-[#f4efe7] hover:bg-white/6 hover:text-white"
                 aria-label={item.label}
               >
-                {index > 0 ? <ToggleButtonGroup.Separator /> : null}
                 {item.label}
-              </ToggleButton>
+              </ToggleGroupItem>
             ))}
-          </ToggleButtonGroup>
-          <div className="mx-1.5 h-4 w-px shrink-0 bg-white/20" />
+          </ToggleGroup>
+          <div className="mx-2 h-5 w-px shrink-0 bg-white/10" />
           <IntervalSelector interval={interval} onIntervalChange={setInterval} />
+          </div>
         </div>
       </div>
 
-      {/* Bottom-left hint */}
-      <div className="pointer-events-none absolute bottom-3 left-4 z-10 text-[10px] text-slate-600">
+      <div className="pointer-events-none absolute bottom-4 left-4 z-10 rounded-full border border-white/8 bg-[#121922]/78 px-3 py-2 text-[10px] uppercase tracking-[0.18em] text-slate-500 shadow-[0_12px_40px_rgba(0,0,0,0.22)] backdrop-blur-xl">
         {errorMessage ? (
           <span className="text-amber-400">{errorMessage}</span>
         ) : isLoadingMoreHistory ? (

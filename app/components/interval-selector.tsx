@@ -2,6 +2,8 @@
 
 import { startTransition } from "react";
 
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+
 import { INTERVALS } from "@/lib/market";
 
 type IntervalSelectorProps = {
@@ -11,25 +13,32 @@ type IntervalSelectorProps = {
 
 export function IntervalSelector({ interval, onIntervalChange }: IntervalSelectorProps) {
   return (
-    <div className="flex items-center">
+    <ToggleGroup
+      type="single"
+      value={interval}
+      onValueChange={(value) => {
+        if (!value) {
+          return;
+        }
+
+        startTransition(() => {
+          onIntervalChange(value as (typeof INTERVALS)[number]);
+        });
+      }}
+      size="sm"
+      variant="default"
+      spacing={0}
+      className="flex items-center"
+    >
       {INTERVALS.map((item) => (
-        <button
+        <ToggleGroupItem
           key={item}
-          type="button"
-          className={`h-7 min-w-0 rounded-md px-2.5 text-xs font-medium transition-colors ${
-            interval === item
-              ? "bg-white/15 text-white"
-              : "text-slate-400 hover:bg-white/8 hover:text-white"
-          }`}
-          onClick={() => {
-            startTransition(() => {
-              onIntervalChange(item);
-            });
-          }}
+          value={item}
+          className="h-7 min-w-0 px-2.5 text-[11px] font-medium tracking-[0.04em] text-slate-400 data-[state=on]:bg-[#2a333f] data-[state=on]:text-[#f2ede4] hover:bg-white/6 hover:text-white"
         >
           {item}
-        </button>
+        </ToggleGroupItem>
       ))}
-    </div>
+    </ToggleGroup>
   );
 }

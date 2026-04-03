@@ -51,34 +51,34 @@ export function CandlestickChart({
     const chart = createChart(containerRef.current, {
       autoSize: true,
       layout: {
-        background: { type: ColorType.Solid, color: "#08111f" },
-        textColor: "#94a3b8",
+        background: { type: ColorType.Solid, color: "#0f141a" },
+        textColor: "#8f9bad",
         attributionLogo: false,
       },
       grid: {
-        vertLines: { color: "rgba(148, 163, 184, 0.08)" },
-        horzLines: { color: "rgba(148, 163, 184, 0.08)" },
+        vertLines: { color: "rgba(143, 155, 173, 0.06)" },
+        horzLines: { color: "rgba(143, 155, 173, 0.06)" },
       },
       crosshair: {
-        vertLine: { color: "rgba(148, 163, 184, 0.35)" },
-        horzLine: { color: "rgba(148, 163, 184, 0.35)" },
+        vertLine: { color: "rgba(201, 160, 94, 0.22)" },
+        horzLine: { color: "rgba(201, 160, 94, 0.22)" },
       },
       rightPriceScale: {
-        borderColor: "rgba(148, 163, 184, 0.18)",
+        borderColor: "rgba(143, 155, 173, 0.14)",
       },
       timeScale: {
-        borderColor: "rgba(148, 163, 184, 0.18)",
+        borderColor: "rgba(143, 155, 173, 0.14)",
         timeVisible: true,
         secondsVisible: false,
       },
     });
 
     const candleSeries = chart.addSeries(CandlestickSeries, {
-      upColor: "#22c55e",
-      downColor: "#ef4444",
+      upColor: "#49b88f",
+      downColor: "#cd7278",
       borderVisible: false,
-      wickUpColor: "#22c55e",
-      wickDownColor: "#ef4444",
+      wickUpColor: "#49b88f",
+      wickDownColor: "#cd7278",
       priceLineVisible: true,
       lastValueVisible: true,
     });
@@ -116,8 +116,8 @@ export function CandlestickChart({
           value: candle.volume,
           color:
             candle.close >= candle.open
-              ? "rgba(34, 197, 94, 0.45)"
-              : "rgba(239, 68, 68, 0.45)",
+              ? "rgba(73, 184, 143, 0.34)"
+              : "rgba(205, 114, 120, 0.34)",
         });
       };
     }
@@ -145,7 +145,7 @@ export function CandlestickChart({
         updateRef.current = null;
       }
     };
-  }, []);
+  }, [updateRef]);
 
   useEffect(() => {
     if (!isLoadingMore) {
@@ -178,8 +178,8 @@ export function CandlestickChart({
         value: candle.volume,
         color:
           candle.close >= candle.open
-            ? "rgba(34, 197, 94, 0.45)"
-            : "rgba(239, 68, 68, 0.45)",
+            ? "rgba(73, 184, 143, 0.34)"
+            : "rgba(205, 114, 120, 0.34)",
       })),
     );
 

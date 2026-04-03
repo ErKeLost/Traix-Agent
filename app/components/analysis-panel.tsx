@@ -1,6 +1,20 @@
 "use client";
 
-import { Accordion, Badge, Card, Chip, ScrollShadow, Skeleton } from "@heroui/react";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
+import { Badge } from "@/components/ui/badge";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Skeleton } from "@/components/ui/skeleton";
 
 import type { MarketAnalysisPayload } from "@/lib/market";
 import { formatCompact, formatPrice, formatSignedPercent } from "./shared/format";
@@ -13,131 +27,122 @@ type AnalysisPanelProps = {
 export function AnalysisPanel({ analysis, error }: AnalysisPanelProps) {
   if (error) {
     return (
-      <Card className="panel-surface rounded-lg border shadow-none">
-        <Card.Header className="flex-col items-start gap-0 px-3 pt-3 pb-1">
+      <Card className="panel-surface rounded-lg border py-0 shadow-none">
+        <CardHeader className="flex-col items-start gap-0 px-3 pt-3 pb-1">
           <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-500">
             AI Analysis
           </p>
-          <Card.Title className="text-sm font-semibold text-white">
+          <CardTitle className="text-sm font-semibold text-white">
             规则分析引擎
-          </Card.Title>
-        </Card.Header>
-        <Card.Content className="px-3 pb-3">
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="px-3 pb-3">
           <p className="mt-2 text-xs text-amber-300">{error}</p>
-        </Card.Content>
+        </CardContent>
       </Card>
     );
   }
 
   if (!analysis) {
     return (
-      <Card className="panel-surface rounded-lg border shadow-none">
-        <Card.Header className="flex-col items-start gap-0 px-3 pt-3 pb-1">
+      <Card className="panel-surface rounded-lg border py-0 shadow-none">
+        <CardHeader className="flex-col items-start gap-0 px-3 pt-3 pb-1">
           <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-500">
             AI Analysis
           </p>
-          <Card.Title className="text-sm font-semibold text-white">
+          <CardTitle className="text-sm font-semibold text-white">
             规则分析引擎
-          </Card.Title>
-        </Card.Header>
-        <Card.Content className="space-y-2 px-3 pb-3">
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-2 px-3 pb-3">
           <Skeleton className="h-20 rounded bg-white/5" />
           <Skeleton className="h-28 rounded bg-white/5" />
           <Skeleton className="h-20 rounded bg-white/5" />
-        </Card.Content>
+        </CardContent>
       </Card>
     );
   }
 
   return (
-    <Card className="panel-surface rounded-lg border shadow-none">
-      <Card.Header className="flex-col items-start gap-0 px-3 pt-3 pb-1">
+    <Card className="panel-surface rounded-lg border py-0 shadow-none">
+      <CardHeader className="flex-col items-start gap-0 px-3 pt-3 pb-1">
         <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-500">
           AI Analysis
         </p>
-        <Card.Title className="text-sm font-semibold text-white">
+        <CardTitle className="text-sm font-semibold text-white">
           规则分析引擎
-        </Card.Title>
-      </Card.Header>
-      <Card.Content className="px-0 pb-0">
-        <ScrollShadow className="mt-2 max-h-[800px] space-y-2 px-3 pb-3">
-          {/* Bias Card */}
-          <div className="rounded-md border border-white/5 bg-white/[0.02] px-3 py-2.5">
-            <div className="flex items-center justify-between">
-              <span className="text-[10px] uppercase tracking-[0.15em] text-slate-500">Bias</span>
-              <span className={`text-xs font-semibold ${biasTone(analysis.bias)}`}>
-                {analysis.bias.toUpperCase()}
-              </span>
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="px-0 pb-0">
+        <ScrollArea className="mt-2 max-h-[800px] px-3 pb-3">
+          <div className="space-y-2 pr-3">
+            <div className="rounded-md border border-white/5 bg-white/[0.02] px-3 py-2.5">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] uppercase tracking-[0.15em] text-slate-500">Bias</span>
+                <span className={`text-xs font-semibold ${biasTone(analysis.bias)}`}>
+                  {analysis.bias.toUpperCase()}
+                </span>
+              </div>
+              <p className="mt-1.5 text-xs leading-5 text-slate-200">{analysis.summary}</p>
+              <div className="mt-2 flex items-center justify-between text-[10px] text-slate-500">
+                <span>Confidence {analysis.confidence}%</span>
+                <span>Risk {analysis.riskLevel}</span>
+              </div>
             </div>
-            <p className="mt-1.5 text-xs leading-5 text-slate-200">{analysis.summary}</p>
-            <div className="mt-2 flex items-center justify-between text-[10px] text-slate-500">
-              <span>Confidence {analysis.confidence}%</span>
-              <span>Risk {analysis.riskLevel}</span>
-            </div>
-          </div>
 
-          {/* Signal Card */}
-          <div className="rounded-md border border-white/5 bg-white/[0.02] px-3 py-2.5">
-            <div className="flex items-center justify-between">
-              <span className="text-[10px] uppercase tracking-[0.15em] text-slate-500">
-                Signal
-              </span>
-              <Chip
-                size="sm"
-                variant="flat"
-                className={`h-5 text-[10px] font-semibold ${
-                  analysis.noTrade
-                    ? "bg-amber-500/15 text-amber-300"
-                    : "bg-emerald-500/15 text-emerald-300"
-                }`}
-              >
-                {analysis.noTrade ? "NO TRADE" : "TRADEABLE"}
-              </Chip>
+            <div className="rounded-md border border-white/5 bg-white/[0.02] px-3 py-2.5">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] uppercase tracking-[0.15em] text-slate-500">
+                  Signal
+                </span>
+                <Badge
+                  variant="outline"
+                  className={`h-5 border-0 text-[10px] font-semibold ${
+                    analysis.noTrade
+                      ? "bg-amber-500/15 text-amber-300"
+                      : "bg-emerald-500/15 text-emerald-300"
+                  }`}
+                >
+                  {analysis.noTrade ? "NO TRADE" : "TRADEABLE"}
+                </Badge>
+              </div>
+              <div className="mt-2 grid grid-cols-2 gap-1.5">
+                <MiniRow label="Setup" value={analysis.setupType} />
+                <MiniRow label="Support" value={formatPrice(analysis.supportLevel)} />
+                <MiniRow label="Resistance" value={formatPrice(analysis.resistanceLevel)} />
+                <MiniRow label="Invalidation" value={analysis.invalidation} />
+              </div>
+              {analysis.noTradeReason && (
+                <p className="mt-2 text-xs leading-5 text-amber-200/80">
+                  {analysis.noTradeReason}
+                </p>
+              )}
             </div>
-            <div className="mt-2 grid grid-cols-2 gap-1.5">
-              <MiniRow label="Setup" value={analysis.setupType} />
-              <MiniRow label="Support" value={formatPrice(analysis.supportLevel)} />
-              <MiniRow label="Resistance" value={formatPrice(analysis.resistanceLevel)} />
-              <MiniRow label="Invalidation" value={analysis.invalidation} />
-            </div>
-            {analysis.noTradeReason && (
-              <p className="mt-2 text-xs leading-5 text-amber-200/80">
-                {analysis.noTradeReason}
-              </p>
+
+            {analysis.aiNarrative && (
+              <div className="rounded-md border border-cyan-400/15 bg-cyan-400/5 px-3 py-2.5">
+                <p className="text-[10px] uppercase tracking-[0.15em] text-cyan-300/60">
+                  Mastra Analyst
+                </p>
+                <p className="mt-1.5 text-xs leading-5 text-cyan-100/90">
+                  {analysis.aiNarrative}
+                </p>
+              </div>
             )}
-          </div>
 
-          {/* AI Narrative */}
-          {analysis.aiNarrative && (
-            <div className="rounded-md border border-cyan-400/15 bg-cyan-400/5 px-3 py-2.5">
-              <p className="text-[10px] uppercase tracking-[0.15em] text-cyan-300/60">
-                Mastra Analyst
-              </p>
-              <p className="mt-1.5 text-xs leading-5 text-cyan-100/90">
-                {analysis.aiNarrative}
-              </p>
-            </div>
-          )}
+            {analysis.agentNarratives.news && (
+              <AgentCard title="News Agent" text={analysis.agentNarratives.news} />
+            )}
+            {analysis.agentNarratives.derivatives && (
+              <AgentCard title="Derivatives Agent" text={analysis.agentNarratives.derivatives} />
+            )}
 
-          {/* Agent Narratives */}
-          {analysis.agentNarratives.news && (
-            <AgentCard title="News Agent" text={analysis.agentNarratives.news} />
-          )}
-          {analysis.agentNarratives.derivatives && (
-            <AgentCard title="Derivatives Agent" text={analysis.agentNarratives.derivatives} />
-          )}
-
-          {/* Desk Panels (Accordion) */}
-          <Accordion variant="default" hideSeparator>
-            <Accordion.Item id="desk-panels">
-              <Accordion.Heading>
-                <Accordion.Trigger className="px-3 py-2 text-xs font-semibold text-white">
+            <Accordion type="single" collapsible>
+              <AccordionItem value="desk-panels" className="border-b-0">
+                <AccordionTrigger className="px-3 py-2 text-xs font-semibold text-white hover:no-underline">
                   Desk Panels
-                </Accordion.Trigger>
-              </Accordion.Heading>
-              <Accordion.Panel>
-                <Accordion.Body className="space-y-3 px-0 pb-2">
-                  {/* Checklist */}
+                </AccordionTrigger>
+                <AccordionContent className="space-y-3 px-0 pb-2">
                   {analysis.aiChecklist.length > 0 && (
                     <div>
                       <p className="mb-2 text-[10px] uppercase tracking-[0.15em] text-slate-500">
@@ -156,7 +161,6 @@ export function AnalysisPanel({ analysis, error }: AnalysisPanelProps) {
                     </div>
                   )}
 
-                  {/* Derivatives */}
                   <div>
                     <p className="mb-2 text-[10px] uppercase tracking-[0.15em] text-slate-500">
                       Derivatives
@@ -172,7 +176,6 @@ export function AnalysisPanel({ analysis, error }: AnalysisPanelProps) {
                     </div>
                   </div>
 
-                  {/* Headlines */}
                   {analysis.headlines.length > 0 && (
                     <div>
                       <p className="mb-2 text-[10px] uppercase tracking-[0.15em] text-slate-500">
@@ -197,7 +200,6 @@ export function AnalysisPanel({ analysis, error }: AnalysisPanelProps) {
                     </div>
                   )}
 
-                  {/* Multi Timeframe */}
                   {analysis.multiTimeframe.length > 0 && (
                     <div>
                       <p className="mb-2 text-[10px] uppercase tracking-[0.15em] text-slate-500">
@@ -210,7 +212,7 @@ export function AnalysisPanel({ analysis, error }: AnalysisPanelProps) {
                             className="flex items-center justify-between rounded-md border border-white/5 bg-white/[0.02] px-3 py-1.5"
                           >
                             <span className="text-xs font-semibold text-white">{item.interval}</span>
-                            <Badge variant="flat" className={`text-[10px] font-semibold ${biasTone(item.bias)}`}>
+                            <Badge variant="outline" className={`text-[10px] font-semibold ${biasTone(item.bias)}`}>
                               {item.bias.toUpperCase()}
                             </Badge>
                           </div>
@@ -219,7 +221,6 @@ export function AnalysisPanel({ analysis, error }: AnalysisPanelProps) {
                     </div>
                   )}
 
-                  {/* Headline Impacts */}
                   {analysis.headlineImpacts.length > 0 && (
                     <div>
                       <p className="mb-2 text-[10px] uppercase tracking-[0.15em] text-slate-500">
@@ -235,7 +236,7 @@ export function AnalysisPanel({ analysis, error }: AnalysisPanelProps) {
                               <span className="text-[10px] uppercase tracking-[0.15em] text-slate-500">
                                 {item.source}
                               </span>
-                              <Badge variant="flat" className={`text-[10px] font-semibold ${biasTone(item.impact)}`}>
+                              <Badge variant="outline" className={`text-[10px] font-semibold ${biasTone(item.impact)}`}>
                                 {item.impact.toUpperCase()}
                               </Badge>
                             </div>
@@ -247,7 +248,6 @@ export function AnalysisPanel({ analysis, error }: AnalysisPanelProps) {
                     </div>
                   )}
 
-                  {/* Drivers / Risks / Scenarios */}
                   {(["drivers", "risks", "scenarios"] as const).map((key) => {
                     const items = analysis[key];
                     if (!items.length) return null;
@@ -276,12 +276,12 @@ export function AnalysisPanel({ analysis, error }: AnalysisPanelProps) {
                       </div>
                     );
                   })}
-                </Accordion.Body>
-              </Accordion.Panel>
-            </Accordion.Item>
-          </Accordion>
-        </ScrollShadow>
-      </Card.Content>
+                </AccordionContent>
+              </AccordionItem>
+            </Accordion>
+          </div>
+        </ScrollArea>
+      </CardContent>
     </Card>
   );
 }

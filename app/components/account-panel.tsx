@@ -1,6 +1,18 @@
 "use client";
 
-import { Accordion, Card, Skeleton } from "@heroui/react";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 
 import type { AccountBalance, AccountOrder, BinanceAccountPayload } from "@/lib/market";
 import { formatPrice } from "./shared/format";
@@ -13,55 +25,55 @@ type AccountPanelProps = {
 export function AccountPanel({ account, error }: AccountPanelProps) {
   if (error) {
     return (
-      <Card className="panel-surface rounded-lg border shadow-none">
-        <Card.Header className="flex-col items-start gap-0 px-3 pt-3 pb-1">
+      <Card className="panel-surface rounded-lg border py-0 shadow-none">
+        <CardHeader className="flex-col items-start gap-0 px-3 pt-3 pb-1">
           <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-500">
             Account
           </p>
-          <Card.Title className="text-sm font-semibold text-white">
+          <CardTitle className="text-sm font-semibold text-white">
             Binance 只读账户
-          </Card.Title>
-        </Card.Header>
-        <Card.Content className="px-3 pb-3">
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="px-3 pb-3">
           <p className="mt-2 rounded-md border border-amber-500/20 bg-amber-500/8 px-3 py-2 text-xs text-amber-200">
             {error}
           </p>
-        </Card.Content>
+        </CardContent>
       </Card>
     );
   }
 
   if (!account) {
     return (
-      <Card className="panel-surface rounded-lg border shadow-none">
-        <Card.Header className="flex-col items-start gap-0 px-3 pt-3 pb-1">
+      <Card className="panel-surface rounded-lg border py-0 shadow-none">
+        <CardHeader className="flex-col items-start gap-0 px-3 pt-3 pb-1">
           <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-500">
             Account
           </p>
-          <Card.Title className="text-sm font-semibold text-white">
+          <CardTitle className="text-sm font-semibold text-white">
             Binance 只读账户
-          </Card.Title>
-        </Card.Header>
-        <Card.Content className="space-y-2 px-3 pb-3">
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-2 px-3 pb-3">
           <Skeleton className="h-8 rounded bg-white/5" />
           <Skeleton className="h-8 rounded bg-white/5" />
           <Skeleton className="h-16 rounded bg-white/5" />
-        </Card.Content>
+        </CardContent>
       </Card>
     );
   }
 
   return (
-    <Card className="panel-surface rounded-lg border shadow-none">
-      <Card.Header className="flex-col items-start gap-0 px-3 pt-3 pb-1">
+    <Card className="panel-surface rounded-lg border py-0 shadow-none">
+      <CardHeader className="flex-col items-start gap-0 px-3 pt-3 pb-1">
         <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-500">
           Account
         </p>
-        <Card.Title className="text-sm font-semibold text-white">
+        <CardTitle className="text-sm font-semibold text-white">
           Binance 只读账户
-        </Card.Title>
-      </Card.Header>
-      <Card.Content className="px-0 pb-0">
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="px-0 pb-0">
         <div className="mt-2 grid grid-cols-2 gap-1.5 px-3">
           <InfoRow label="Type" value={account.accountType} />
           <InfoRow label="Can Trade" value={account.canTrade ? "Yes" : "No"} />
@@ -69,15 +81,12 @@ export function AccountPanel({ account, error }: AccountPanelProps) {
           <InfoRow label="Perms" value={account.permissions.join(", ") || "USER_DATA"} />
         </div>
 
-        <Accordion variant="default" hideSeparator className="mt-2">
-          <Accordion.Item id="account-details">
-            <Accordion.Heading>
-              <Accordion.Trigger className="px-3 py-2 text-xs font-semibold text-white">
-                Balances & Orders
-              </Accordion.Trigger>
-            </Accordion.Heading>
-            <Accordion.Panel>
-              <Accordion.Body className="space-y-3 px-3 pb-3">
+        <Accordion type="single" collapsible className="mt-2">
+          <AccordionItem value="account-details" className="border-b-0">
+            <AccordionTrigger className="px-3 py-2 text-xs font-semibold text-white hover:no-underline">
+              Balances & Orders
+            </AccordionTrigger>
+            <AccordionContent className="space-y-3 px-3 pb-3">
                 <div>
                   <p className="mb-2 text-[10px] uppercase tracking-[0.15em] text-slate-500">
                     Balances
@@ -104,11 +113,10 @@ export function AccountPanel({ account, error }: AccountPanelProps) {
                     </div>
                   )}
                 </div>
-              </Accordion.Body>
-            </Accordion.Panel>
-          </Accordion.Item>
+            </AccordionContent>
+          </AccordionItem>
         </Accordion>
-      </Card.Content>
+      </CardContent>
     </Card>
   );
 }

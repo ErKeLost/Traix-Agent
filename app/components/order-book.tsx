@@ -1,6 +1,12 @@
 "use client";
 
-import { Card, ScrollShadow } from "@heroui/react";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 import type { OrderBookLevel } from "@/lib/market";
 import { formatCompact, formatPrice } from "./shared/format";
@@ -16,16 +22,16 @@ export function OrderBook({ bids, asks }: OrderBookProps) {
   const maxQty = Math.max(maxBidQty, maxAskQty);
 
   return (
-    <Card className="panel-surface rounded-lg border shadow-none">
-      <Card.Header className="flex-col items-start gap-0 px-3 pt-3 pb-1">
+    <Card className="panel-surface rounded-lg border py-0 shadow-none">
+      <CardHeader className="flex-col items-start gap-0 px-3 pt-3 pb-1">
         <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-500">
           Order Book
         </p>
-        <Card.Title className="text-sm font-semibold text-white">
+        <CardTitle className="text-sm font-semibold text-white">
           Top 10 深度
-        </Card.Title>
-      </Card.Header>
-      <Card.Content className="px-0 pb-0">
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="px-0 pb-0">
         <div className="mt-2 overflow-hidden rounded-md border border-white/5">
           <div className="grid grid-cols-2 bg-white/[0.03] px-3 py-2 text-[10px] uppercase tracking-[0.15em] text-slate-500">
             <span>Price</span>
@@ -33,21 +39,23 @@ export function OrderBook({ bids, asks }: OrderBookProps) {
           </div>
 
           {/* Asks (reversed: highest at top) */}
-          <ScrollShadow className="max-h-[260px] divide-y divide-white/5">
-            {[...asks].reverse().map((level, i) => (
-              <div
-                key={`ask-${i}`}
-                className="relative grid grid-cols-2 px-3 py-1.5 text-xs font-mono"
-              >
+          <ScrollArea className="max-h-[260px]">
+            <div className="divide-y divide-white/5">
+              {[...asks].reverse().map((level, i) => (
                 <div
-                  className="depth-bar depth-bar-ask"
-                  style={{ width: `${(level.quantity / maxQty) * 100}%` }}
-                />
-                <span className="relative text-rose-400">{formatPrice(level.price)}</span>
-                <span className="relative text-right text-slate-400">{formatCompact(level.quantity)}</span>
-              </div>
-            ))}
-          </ScrollShadow>
+                  key={`ask-${i}`}
+                  className="relative grid grid-cols-2 px-3 py-1.5 text-xs font-mono"
+                >
+                  <div
+                    className="depth-bar depth-bar-ask"
+                    style={{ width: `${(level.quantity / maxQty) * 100}%` }}
+                  />
+                  <span className="relative text-rose-400">{formatPrice(level.price)}</span>
+                  <span className="relative text-right text-slate-400">{formatCompact(level.quantity)}</span>
+                </div>
+              ))}
+            </div>
+          </ScrollArea>
 
           {/* Spread */}
           <div className="border-y border-white/5 px-3 py-1.5 text-center text-[10px] text-slate-500">
@@ -57,23 +65,25 @@ export function OrderBook({ bids, asks }: OrderBookProps) {
           </div>
 
           {/* Bids */}
-          <ScrollShadow className="max-h-[260px] divide-y divide-white/5">
-            {bids.map((level, i) => (
-              <div
-                key={`bid-${i}`}
-                className="relative grid grid-cols-2 px-3 py-1.5 text-xs font-mono"
-              >
+          <ScrollArea className="max-h-[260px]">
+            <div className="divide-y divide-white/5">
+              {bids.map((level, i) => (
                 <div
-                  className="depth-bar depth-bar-bid"
-                  style={{ width: `${(level.quantity / maxQty) * 100}%` }}
-                />
-                <span className="relative text-emerald-400">{formatPrice(level.price)}</span>
-                <span className="relative text-right text-slate-400">{formatCompact(level.quantity)}</span>
-              </div>
-            ))}
-          </ScrollShadow>
+                  key={`bid-${i}`}
+                  className="relative grid grid-cols-2 px-3 py-1.5 text-xs font-mono"
+                >
+                  <div
+                    className="depth-bar depth-bar-bid"
+                    style={{ width: `${(level.quantity / maxQty) * 100}%` }}
+                  />
+                  <span className="relative text-emerald-400">{formatPrice(level.price)}</span>
+                  <span className="relative text-right text-slate-400">{formatCompact(level.quantity)}</span>
+                </div>
+              ))}
+            </div>
+          </ScrollArea>
         </div>
-      </Card.Content>
+      </CardContent>
     </Card>
   );
 }

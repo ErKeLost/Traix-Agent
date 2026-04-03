@@ -1,9 +1,19 @@
 import type { Metadata } from "next";
 import "./globals.css";
-import { Geist } from "next/font/google";
+import { IBM_Plex_Mono, IBM_Plex_Sans } from "next/font/google";
 import { cn } from "@/lib/utils";
 
-const geist = Geist({subsets:['latin'],variable:'--font-sans'});
+const plexSans = IBM_Plex_Sans({
+  subsets: ["latin"],
+  weight: ["400", "500", "600"],
+  variable: "--font-sans",
+});
+
+const plexMono = IBM_Plex_Mono({
+  subsets: ["latin"],
+  weight: ["400", "500"],
+  variable: "--font-mono",
+});
 
 export const metadata: Metadata = {
   title: "Trading Terminal",
@@ -16,8 +26,16 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="zh-CN" className={cn("h-full overflow-hidden antialiased", "font-sans", geist.variable)}>
-      <body className="hero-theme-shell h-full overflow-hidden">{children}</body>
+    <html
+      lang="zh-CN"
+      className={cn(
+        "dark h-full overflow-hidden antialiased",
+        "font-sans",
+        plexSans.variable,
+        plexMono.variable,
+      )}
+    >
+      <body className="h-full overflow-hidden bg-[var(--bg-primary)] text-foreground">{children}</body>
     </html>
   );
 }
