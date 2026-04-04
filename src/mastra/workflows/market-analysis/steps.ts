@@ -11,6 +11,7 @@ import {
   type MarketSymbol,
 } from "@/lib/market";
 
+import { hasTradingModelAccess } from "../../agents/model";
 import {
   marketAnalysisInputSchema,
   marketAnalysisWorkflowOutputSchema,
@@ -181,7 +182,7 @@ export const enrichNewsNarrativeStep = createStep({
   inputSchema: marketAnalysisWorkflowOutputSchema,
   outputSchema: marketAnalysisWorkflowOutputSchema,
   execute: async ({ inputData, mastra }) => {
-    if (!process.env.OPENROUTER_API_KEY || !mastra) {
+    if (!hasTradingModelAccess() || !mastra) {
       return inputData;
     }
 
@@ -225,7 +226,7 @@ export const enrichDerivativesNarrativeStep = createStep({
   inputSchema: marketAnalysisWorkflowOutputSchema,
   outputSchema: marketAnalysisWorkflowOutputSchema,
   execute: async ({ inputData, mastra }) => {
-    if (!process.env.OPENROUTER_API_KEY || !mastra) {
+    if (!hasTradingModelAccess() || !mastra) {
       return inputData;
     }
 
@@ -275,7 +276,7 @@ export const enrichSupervisorNarrativeStep = createStep({
   inputSchema: marketAnalysisWorkflowOutputSchema,
   outputSchema: marketAnalysisWorkflowOutputSchema,
   execute: async ({ inputData, mastra }) => {
-    if (!process.env.OPENROUTER_API_KEY || !mastra) {
+    if (!hasTradingModelAccess() || !mastra) {
       return inputData;
     }
 

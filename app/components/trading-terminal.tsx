@@ -47,17 +47,25 @@ export function TradingTerminal() {
   // 实时 tick 直接调用 chart 的 update()，完全绕过 React state，避免每秒全量 setData
   const chartUpdateRef = useRef<((candle: Candle) => void) | null>(null);
   const candlesRef = useRef<Candle[]>([]);
+  const activeDatasetKeyRef = useRef("");
+  const datasetKey = `${symbol}-${interval}-${timeRange}`;
 
   useEffect(() => {
     candlesRef.current = candles;
   }, [candles]);
 
   useEffect(() => {
+    activeDatasetKeyRef.current = datasetKey;
+  }, [datasetKey]);
+
+  useEffect(() => {
     let cancelled = false;
+    const requestDatasetKey = datasetKey;
 
     async function loadCandles() {
       setStatus((current) => (candlesRef.current.length === 0 ? "loading" : current));
       setErrorMessage(null);
+      setIsLoadingMoreHistory(false);
 
       try {
         const rangeSeconds = RANGE_OPTIONS.find((item) => item.key === timeRange)?.seconds ?? 0;
@@ -76,14 +84,14 @@ export function TradingTerminal() {
 
         const payload = (await response.json()) as MarketPayload;
 
-        if (!cancelled) {
-          setCandles(payload.candles);
+        if (!cancelled && activeDatasetKeyRef.current === requestDatasetKey) {
+          setCandles(sortCandlesAsc(payload.candles));
           setHistoryExhausted(false);
           setIsLoadingMoreHistory(false);
           setStatus("live");
         }
       } catch {
-        if (!cancelled) {
+        if (!cancelled && activeDatasetKeyRef.current === requestDatasetKey) {
           setStatus("error");
           setErrorMessage("K线数据暂时不可用。请检查网络或稍后重试。");
         }
@@ -95,14 +103,17 @@ export function TradingTerminal() {
     return () => {
       cancelled = true;
     };
-  }, [symbol, interval, timeRange]);
+  }, [datasetKey]);
 
   async function loadMoreHistory() {
-    if (isLoadingMoreHistory || historyExhausted || candles.length === 0) {
+    const requestDatasetKey = activeDatasetKeyRef.current;
+    const currentCandles = candlesRef.current;
+
+    if (isLoadingMoreHistory || historyExhausted || currentCandles.length === 0) {
       return;
     }
 
-    const earliestCandle = candles[0];
+    const earliestCandle = currentCandles[0];
 
     if (!earliestCandle) {
       return;
@@ -123,20 +134,37 @@ export function TradingTerminal() {
       const payload = (await response.json()) as MarketPayload;
       const olderCandles = payload.candles.filter((item) => item.time < earliestCandle.time);
 
+      if (activeDatasetKeyRef.current !== requestDatasetKey) {
+        return;
+      }
+
       if (olderCandles.length === 0) {
         setHistoryExhausted(true);
         return;
       }
 
-      setCandles((current) => mergeOlderCandles(current, olderCandles));
+      setCandles((current) => {
+        if (activeDatasetKeyRef.current !== requestDatasetKey) {
+          return current;
+        }
 
-      if (olderCandles.length < HISTORY_PAGE_SIZE) {
+        return mergeOlderCandles(current, olderCandles);
+      });
+
+      if (
+        olderCandles.length < HISTORY_PAGE_SIZE &&
+        activeDatasetKeyRef.current === requestDatasetKey
+      ) {
         setHistoryExhausted(true);
       }
     } catch {
-      setErrorMessage("加载更早历史数据失败。");
+      if (activeDatasetKeyRef.current === requestDatasetKey) {
+        setErrorMessage("加载更早历史数据失败。");
+      }
     } finally {
-      setIsLoadingMoreHistory(false);
+      if (activeDatasetKeyRef.current === requestDatasetKey) {
+        setIsLoadingMoreHistory(false);
+      }
     }
   }
 
@@ -327,9 +355,9 @@ export function TradingTerminal() {
 
       <div className="absolute inset-0">
         <CandlestickChart
-          key={symbol}
+          key={datasetKey}
           candles={candles}
-          resetKey={`${symbol}-${interval}`}
+          resetKey={datasetKey}
           onLoadMore={loadMoreHistory}
           isLoadingMore={isLoadingMoreHistory}
           updateRef={chartUpdateRef}
@@ -460,27 +488,21 @@ export function TradingTerminal() {
 }
 
 function mergeRealtimeCandle(current: Candle[], next: Candle) {
-  if (current.length === 0) {
-    return [next];
-  }
-
-  const last = current.at(-1);
-
-  if (!last) {
-    return [next];
-  }
-
-  if (last.time === next.time) {
-    return [...current.slice(0, -1), next];
-  }
-
-  return [...current.slice(-(CANDLE_LIMIT - 1)), next];
+  return sortCandlesAsc([...current, next]).slice(-CANDLE_LIMIT);
 }
 
 function mergeOlderCandles(current: Candle[], older: Candle[]) {
-  const seen = new Set(current.map((item) => item.time));
-  const uniqueOlder = older.filter((item) => !seen.has(item.time));
-  return [...uniqueOlder, ...current];
+  return sortCandlesAsc([...older, ...current]);
+}
+
+function sortCandlesAsc(items: Candle[]) {
+  const deduped = new Map<number, Candle>();
+
+  for (const item of items) {
+    deduped.set(item.time, item);
+  }
+
+  return Array.from(deduped.values()).sort((left, right) => left.time - right.time);
 }
 
 function getIntervalSeconds(interval: (typeof INTERVALS)[number]) {

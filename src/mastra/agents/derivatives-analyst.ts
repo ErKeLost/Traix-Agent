@@ -1,6 +1,6 @@
 import { Agent } from "@mastra/core/agent";
 
-import { resolveOpenRouterModel } from "./model";
+import { resolveTradingModel } from "./model";
 
 export const derivativesAnalystAgent = new Agent({
   id: "derivatives-analyst",
@@ -25,5 +25,5 @@ export const derivativesAnalystAgent = new Agent({
 - 先给一句仓位判断
 - 有必要时补 2 到 4 个要点
 `,
-  model: resolveOpenRouterModel(),
+  model: resolveTradingModel(),
 });

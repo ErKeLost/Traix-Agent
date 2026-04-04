@@ -5,10 +5,12 @@ import {
   CandlestickSeries,
   ColorType,
   HistogramSeries,
+  type TickMarkType,
   createChart,
   type IChartApi,
   type LogicalRange,
   type ISeriesApi,
+  type Time,
   type UTCTimestamp,
 } from "lightweight-charts";
 
@@ -23,6 +25,78 @@ type CandlestickChartProps = {
    *  完全绕过 React state，避免每个 tick 触发全量 setData */
   updateRef?: React.MutableRefObject<((candle: Candle) => void) | null>;
 };
+
+const BEIJING_LOCALE = "zh-CN";
+const BEIJING_TIME_ZONE = "Asia/Shanghai";
+
+const beijingTimeFormatter = new Intl.DateTimeFormat(BEIJING_LOCALE, {
+  timeZone: BEIJING_TIME_ZONE,
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+  hour: "2-digit",
+  minute: "2-digit",
+  hour12: false,
+});
+
+const beijingTimeOnlyFormatter = new Intl.DateTimeFormat(BEIJING_LOCALE, {
+  timeZone: BEIJING_TIME_ZONE,
+  hour: "2-digit",
+  minute: "2-digit",
+  hour12: false,
+});
+
+const beijingDateTimeFormatter = new Intl.DateTimeFormat(BEIJING_LOCALE, {
+  timeZone: BEIJING_TIME_ZONE,
+  month: "numeric",
+  day: "numeric",
+  hour: "2-digit",
+  minute: "2-digit",
+  hour12: false,
+});
+
+const beijingDateFormatter = new Intl.DateTimeFormat(BEIJING_LOCALE, {
+  timeZone: BEIJING_TIME_ZONE,
+  year: "2-digit",
+  month: "numeric",
+  day: "numeric",
+});
+
+function toBeijingDate(time: Time) {
+  if (typeof time === "number") {
+    return new Date(time * 1000);
+  }
+
+  if ("timestamp" in time && typeof time.timestamp === "number") {
+    return new Date(time.timestamp * 1000);
+  }
+
+  return new Date(Date.UTC(time.year, time.month - 1, time.day));
+}
+
+function formatTickMark(time: Time, tickMarkType: TickMarkType) {
+  const date = toBeijingDate(time);
+
+  if (
+    tickMarkType === "time" ||
+    tickMarkType === "time-with-seconds" ||
+    tickMarkType === "minute1" ||
+    tickMarkType === "minute5" ||
+    tickMarkType === "minute30" ||
+    tickMarkType === "hour1" ||
+    tickMarkType === "hour3" ||
+    tickMarkType === "hour6" ||
+    tickMarkType === "hour12"
+  ) {
+    return beijingTimeOnlyFormatter.format(date);
+  }
+
+  if (tickMarkType === "day-of-month") {
+    return beijingDateTimeFormatter.format(date);
+  }
+
+  return beijingDateFormatter.format(date);
+}
 
 export function CandlestickChart({
   candles,
@@ -48,12 +122,19 @@ export function CandlestickChart({
       return;
     }
 
-    const chart = createChart(containerRef.current, {
-      autoSize: true,
+    const container = containerRef.current;
+    const chart = createChart(container, {
+      width: Math.max(1, Math.floor(container.clientWidth)),
+      height: Math.max(1, Math.floor(container.clientHeight)),
       layout: {
         background: { type: ColorType.Solid, color: "#0f141a" },
         textColor: "#8f9bad",
         attributionLogo: false,
+      },
+      localization: {
+        locale: BEIJING_LOCALE,
+        dateFormat: "yyyy-MM-dd",
+        timeFormatter: (time) => beijingTimeFormatter.format(toBeijingDate(time)),
       },
       grid: {
         vertLines: { color: "rgba(143, 155, 173, 0.06)" },
@@ -70,6 +151,7 @@ export function CandlestickChart({
         borderColor: "rgba(143, 155, 173, 0.14)",
         timeVisible: true,
         secondsVisible: false,
+        tickMarkFormatter: (time, tickMarkType) => formatTickMark(time, tickMarkType),
       },
     });
 
@@ -100,6 +182,31 @@ export function CandlestickChart({
     chartRef.current = chart;
     candleSeriesRef.current = candleSeries;
     volumeSeriesRef.current = volumeSeries;
+
+    const syncChartSize = () => {
+      const target = containerRef.current;
+
+      if (!target || !chartRef.current) {
+        return;
+      }
+
+      const rect = target.getBoundingClientRect();
+      const width = Math.max(1, Math.floor(rect.width));
+      const height = Math.max(1, Math.floor(rect.height));
+
+      chartRef.current.resize(width, height);
+    };
+
+    syncChartSize();
+    const frame = requestAnimationFrame(syncChartSize);
+    const resizeObserver = new ResizeObserver(() => {
+      syncChartSize();
+    });
+    resizeObserver.observe(container);
+    container.addEventListener("pointerenter", syncChartSize);
+    window.addEventListener("resize", syncChartSize);
+    window.visualViewport?.addEventListener("resize", syncChartSize);
+    window.visualViewport?.addEventListener("scroll", syncChartSize);
 
     // 注册实时单根 K 线 update 函数，调用方可通过 ref 直接更新，绕过 React state
     if (updateRef) {
@@ -136,6 +243,12 @@ export function CandlestickChart({
     chart.timeScale().subscribeVisibleLogicalRangeChange(handleVisibleRangeChange);
 
     return () => {
+      cancelAnimationFrame(frame);
+      resizeObserver.disconnect();
+      container.removeEventListener("pointerenter", syncChartSize);
+      window.removeEventListener("resize", syncChartSize);
+      window.visualViewport?.removeEventListener("resize", syncChartSize);
+      window.visualViewport?.removeEventListener("scroll", syncChartSize);
       chart.timeScale().unsubscribeVisibleLogicalRangeChange(handleVisibleRangeChange);
       chart.remove();
       chartRef.current = null;
@@ -162,8 +275,10 @@ export function CandlestickChart({
       return;
     }
 
+    const orderedCandles = [...candles].sort((left, right) => left.time - right.time);
+
     candleSeries.setData(
-      candles.map((candle) => ({
+      orderedCandles.map((candle) => ({
         time: candle.time as UTCTimestamp,
         open: candle.open,
         high: candle.high,
@@ -173,7 +288,7 @@ export function CandlestickChart({
     );
 
     volumeSeries.setData(
-      candles.map((candle) => ({
+      orderedCandles.map((candle) => ({
         time: candle.time as UTCTimestamp,
         value: candle.volume,
         color:

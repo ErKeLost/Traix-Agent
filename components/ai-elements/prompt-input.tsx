@@ -21,7 +21,7 @@ function PromptInput({ className, ...props }: React.ComponentProps<"form">) {
   return (
     <form
       className={cn(
-        "overflow-hidden rounded-[26px] border border-white/10 bg-[linear-gradient(180deg,#121922_0%,#0f151d_100%)] shadow-[0_22px_52px_rgba(0,0,0,0.34)]",
+        "overflow-hidden rounded-[22px] border border-white/8 bg-[linear-gradient(180deg,#121922_0%,#0d1319_100%)] shadow-[0_22px_52px_rgba(0,0,0,0.34)]",
         className,
       )}
       {...props}
@@ -60,7 +60,7 @@ function PromptInputTextarea({ className, ...props }: React.ComponentProps<typeo
   return (
     <Textarea
       className={cn(
-        "min-h-[112px] resize-none border-0 bg-transparent px-5 py-4 text-[15px] leading-7 text-slate-100 placeholder:text-slate-500 focus-visible:ring-0 focus-visible:outline-none",
+        "min-h-[96px] resize-none border-0 bg-transparent px-4 py-4 text-[15px] leading-6 text-slate-100 placeholder:text-slate-500 focus-visible:ring-0 focus-visible:outline-none",
         className,
       )}
       {...props}
@@ -83,7 +83,7 @@ function PromptInputSubmit({
       type="submit"
       size="icon"
       className={cn(
-        "size-11 rounded-full bg-[#c9a05e] text-[#11161d] shadow-[0_8px_24px_rgba(201,160,94,0.28)] hover:bg-[#d3ab6d]",
+        "size-10 rounded-full bg-[#c9a05e] text-[#11161d] shadow-[0_8px_24px_rgba(201,160,94,0.28)] hover:bg-[#d3ab6d]",
         className,
       )}
       {...props}

@@ -1,9 +1,10 @@
 import { Agent } from "@mastra/core/agent";
 
+import { deepResearchAgent } from "./deep-research";
 import { derivativesAnalystAgent } from "./derivatives-analyst";
 import { marketAnalystAgent } from "./market-analyst";
 import { newsAnalystAgent } from "./news-analyst";
-import { resolveOpenRouterModel } from "./model";
+import { resolveTradingModel } from "./model";
 
 export const tradingChatAgent = new Agent({
   id: "trading-chat",
@@ -17,7 +18,8 @@ export const tradingChatAgent = new Agent({
 - 市场结构问题优先交给 market-analyst
 - 资金费率、持仓量、挤压风险问题优先交给 derivatives-analyst
 - 宏观、监管、突发消息问题优先交给 news-analyst
-- 如果用户问的是完整交易计划、方向判断或为什么，就综合多个席位后再回答
+- 如果用户问的是深度研究、完整交易计划、方向判断、为什么、或多因素是否共振，优先交给 deep-research
+- 如果只是单点问题，优先走单一专家，不要把所有问题都升级成重研究
 
 回答规则：
 - 只使用当前提供的市场上下文
@@ -32,8 +34,9 @@ export const tradingChatAgent = new Agent({
 - 然后给触发条件、风险点、失效位
 - 除非用户要求，否则不要用 Summary、Checklist 这种标题
 `,
-  model: resolveOpenRouterModel(),
+  model: resolveTradingModel(),
   agents: {
+    deepResearch: deepResearchAgent,
     marketAnalyst: marketAnalystAgent,
     derivativesAnalyst: derivativesAnalystAgent,
     newsAnalyst: newsAnalystAgent,

@@ -44,10 +44,10 @@ function MessageContent({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
       className={cn(
-        "w-full px-3 py-2.5",
+        "w-full px-3 py-3",
         from === "user"
-          ? "max-w-[82%] rounded-[22px] rounded-br-md border border-[#8b7143]/24 bg-[linear-gradient(180deg,#18222e_0%,#141c26_100%)] text-slate-100 shadow-[0_14px_28px_rgba(0,0,0,0.14)] sm:ml-16"
-          : "max-w-[94%] border-l border-[#8b7143]/20 pl-4 text-slate-100 sm:mr-12",
+          ? "max-w-[78%] rounded-[20px] rounded-br-md border border-[#8b7143]/24 bg-[linear-gradient(180deg,#18212b_0%,#131a23_100%)] text-slate-100 shadow-[0_14px_28px_rgba(0,0,0,0.14)] sm:ml-20"
+          : "max-w-[96%] rounded-[22px] border border-white/7 bg-[linear-gradient(180deg,rgba(19,26,33,0.9)_0%,rgba(12,17,23,0.92)_100%)] px-4 py-3.5 text-slate-100 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)] sm:mr-10",
         className,
       )}
       {...props}
@@ -60,11 +60,11 @@ function MessageResponse({ className, ...props }: React.ComponentProps<"div">) {
 }
 
 function MessageActions({ className, ...props }: React.ComponentProps<"div">) {
-  return <div className={cn("flex items-center gap-1 pl-4", className)} {...props} />
+  return <div className={cn("flex items-center gap-1 pl-2", className)} {...props} />
 }
 
 function MessageAction({ className, ...props }: React.ComponentProps<typeof Button>) {
-  return <Button type="button" variant="ghost" size="icon-xs" className={cn("text-slate-500 hover:text-slate-200", className)} {...props} />
+  return <Button type="button" variant="ghost" size="icon-xs" className={cn("text-slate-500 hover:bg-white/[0.04] hover:text-slate-200", className)} {...props} />
 }
 
 export { Message, MessageAction, MessageActions, MessageContent, MessageResponse }

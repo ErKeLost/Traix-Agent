@@ -1,13 +1,20 @@
-export function resolveOpenRouterModel() {
-  const openRouterApiKey = process.env.OPENROUTER_API_KEY;
+import { createOpenAI } from "@ai-sdk/openai";
 
-  if (openRouterApiKey) {
-    return {
-      id: "z-ai/glm-5v-turbo",
-      url: "https://openrouter.ai/api/v1",
-      apiKey: openRouterApiKey,
-    } as const;
-  }
+export const TRADING_MODEL_ID = "gpt-5.4";
+export const TRADING_OPENAI_BASE_URL = "https://codex.fusrx.cn/v1";
+export const TRADING_OPENAI_API_KEY =
+  "sk-20df29540a8623c157a045140115475f0106551a531b126213c1809eadc48daa";
 
-  return "openai/gpt-5.2" as const;
+const tradingProvider = createOpenAI({
+  name: "codex",
+  baseURL: TRADING_OPENAI_BASE_URL,
+  apiKey: TRADING_OPENAI_API_KEY,
+});
+
+export function resolveTradingModel() {
+  return tradingProvider.responses(TRADING_MODEL_ID);
+}
+
+export function hasTradingModelAccess() {
+  return Boolean(TRADING_OPENAI_API_KEY);
 }

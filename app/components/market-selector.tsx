@@ -20,12 +20,15 @@ type MarketSelectorProps = {
   onClose: () => void;
 };
 
-type SymbolItem = { symbol: string; base: string; quote: string };
+type SearchMarket = "spot" | "perpetual";
+
+type SymbolItem = { symbol: string; base: string; quote: string; markets: SearchMarket[] };
 
 const FAVORITES: SymbolItem[] = MARKET_SYMBOLS.map((m) => ({
   symbol: m.symbol,
   base: m.base,
   quote: m.quote,
+  markets: ["spot", "perpetual"],
 }));
 
 export function MarketSelector({ open, symbol, onSymbolChange, onClose }: MarketSelectorProps) {
@@ -123,7 +126,7 @@ export function MarketSelector({ open, symbol, onSymbolChange, onClose }: Market
               </Button>
             </div>
             <p className="text-sm leading-6 text-slate-400">
-              直接搜索符号，或者从常用交易对里快速切换。所有分析上下文会同步跟随当前市场。
+              现货和永续一起搜索。
             </p>
             <div className="relative">
               <svg className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -166,30 +169,46 @@ export function MarketSelector({ open, symbol, onSymbolChange, onClose }: Market
               ) : (
                 <div className="grid gap-2 md:grid-cols-2">
                   {listItems.map((item) => {
-                  const active = item.symbol === symbol;
+                    const active = item.symbol === symbol;
 
-                  return (
-                    <Button
-                      key={item.symbol}
-                      type="button"
-                      variant={active ? "secondary" : "ghost"}
-                      className={`h-auto w-full justify-start rounded-2xl border px-3 py-3 ${
-                        active
-                          ? "border-[#4f647d] bg-[#1b2631] text-white"
-                          : "border-white/6 text-slate-300 hover:bg-white/6 hover:text-white"
-                      }`}
-                      onClick={() => select(item.symbol)}
-                    >
-                      <div className="w-full text-left">
-                        <div className="flex items-center justify-between">
-                          <span className="text-sm font-semibold">{item.base}</span>
-                          <span className="rounded-full border border-white/8 px-2 py-0.5 text-[10px] uppercase tracking-[0.16em] text-slate-500">{item.quote}</span>
+                    return (
+                      <Button
+                        key={`${item.symbol}-${item.markets.join("-")}`}
+                        type="button"
+                        variant={active ? "secondary" : "ghost"}
+                        className={`h-auto w-full justify-start rounded-2xl border px-3 py-3 ${
+                          active
+                            ? "border-[#4f647d] bg-[#1b2631] text-white"
+                            : "border-white/6 text-slate-300 hover:bg-white/6 hover:text-white"
+                        }`}
+                        onClick={() => select(item.symbol)}
+                      >
+                        <div className="w-full text-left">
+                          <div className="flex items-start justify-between gap-3">
+                            <div>
+                              <span className="text-sm font-semibold">{item.base}</span>
+                              <p className="mt-1 text-[11px] text-slate-500">{item.symbol}</p>
+                            </div>
+                            <div className="flex flex-wrap items-center justify-end gap-1.5">
+                              <span className="rounded-full border border-white/8 px-2 py-0.5 text-[10px] uppercase tracking-[0.16em] text-slate-500">
+                                {item.quote}
+                              </span>
+                              {item.markets.includes("spot") ? (
+                                <span className="rounded-full border border-[#415164] bg-[#111923] px-2 py-0.5 text-[10px] tracking-[0.12em] text-slate-300">
+                                  现货
+                                </span>
+                              ) : null}
+                              {item.markets.includes("perpetual") ? (
+                                <span className="rounded-full border border-[#8b7143]/28 bg-[#1a1814] px-2 py-0.5 text-[10px] tracking-[0.12em] text-[#d6c2a1]">
+                                  永续
+                                </span>
+                              ) : null}
+                            </div>
+                          </div>
                         </div>
-                        <p className="mt-1 text-[11px] text-slate-500">{item.symbol}</p>
-                      </div>
-                    </Button>
-                  );
-                })}
+                      </Button>
+                    );
+                  })}
                 </div>
               )}
             </div>

@@ -73,7 +73,7 @@ function ConversationContent({ className, children, ...props }: React.ComponentP
       ref={viewportRef}
       onScroll={handleScroll}
       className={cn(
-        "min-h-0 flex-1 overflow-y-auto bg-[linear-gradient(180deg,#0b1117_0%,#0a1015_100%)] px-3 py-3",
+        "min-h-0 flex-1 overflow-y-auto bg-[linear-gradient(180deg,#0b1117_0%,#0a1015_54%,#090d12_100%)] px-3 py-3",
         className,
       )}
       {...props}
@@ -104,7 +104,9 @@ function ConversationEmptyState({
       {...props}
     >
       {icon ? <div className="mb-4 text-[#8b7143]">{icon}</div> : null}
-      <p className="text-sm font-medium tracking-[-0.02em] text-[#f3eee5]">{title}</p>
+      <h3 className="max-w-xl text-balance text-[clamp(1.25rem,2vw,1.9rem)] font-semibold tracking-[-0.05em] text-[#f3eee5]">
+        {title}
+      </h3>
       {description ? <p className="mt-2 max-w-md text-sm leading-6 text-slate-500">{description}</p> : null}
       {children}
     </div>
@@ -124,7 +126,7 @@ function ConversationScrollButton({ className, ...props }: React.ComponentProps<
       size="icon-sm"
       variant="outline"
       className={cn(
-        "absolute right-4 bottom-4 z-10 rounded-full border-white/10 bg-[#121922]/95 text-slate-300 shadow-[0_10px_28px_rgba(0,0,0,0.35)] backdrop-blur",
+        "absolute right-4 bottom-4 z-10 rounded-full border-white/10 bg-[#121922]/95 text-slate-300 shadow-[0_10px_28px_rgba(0,0,0,0.35)] backdrop-blur hover:bg-[#18202a] hover:text-slate-100",
         className,
       )}
       onClick={() => scrollToBottom()}
