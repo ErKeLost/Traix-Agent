@@ -1,3 +1,6 @@
 [submodule "codex"]
 	path = codex
 	url = https://github.com/openai/codex.git
+[submodule "codexx"]
+	path = codexx
+	url = https://github.com/openai/codex.git

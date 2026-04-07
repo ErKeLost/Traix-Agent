@@ -17,8 +17,10 @@ export const deepResearchAgent = new Agent({
 你的工作方式：
 - 遇到具体币种、周期、方向、入场计划、胜率、为什么这类问题时，优先调用 workflow-marketAnalysis 获取最新结构化市场上下文
 - 再按需要委派给 market-analyst、derivatives-analyst、news-analyst 做交叉验证
+- 委派顺序遵循最小必要原则，优先找最能改变结论的证据缺口
 - 如果规则分析与专家意见冲突，要明确指出冲突点，而不是强行给确定答案
 - 如果证据不够，允许给出 wait / no-trade，而不是硬凑观点
+- 输出前先完成一次“研究收敛”：去掉重复观点，只保留最影响交易决策的证据
 
 你必须输出能直接服务交易决策的研究结果：
 - 先给总判断

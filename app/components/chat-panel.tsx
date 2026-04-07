@@ -55,7 +55,6 @@ import {
   SourcesContent,
   SourcesTrigger,
 } from "@/components/ai-elements/sources";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -73,17 +72,55 @@ type ChatPanelProps = {
 };
 
 type DeskMode = "auto" | "market" | "derivatives" | "news";
-type MessagePart = UIMessage["parts"][number];
+type StreamEventPayload = {
+  type: "stream.event";
+  eventName:
+    | "assistant.delta"
+    | "assistant.reasoning.delta"
+    | "tool.call.started"
+    | "tool.call.completed"
+    | "tool.call.failed"
+    | "usage.updated"
+    | "session.ended"
+    | "agent.handoff.started"
+    | "agent.handoff.completed"
+    | "agent.stream.delta";
+  agentId?: string;
+  targetId?: string;
+  targetName?: string;
+  targetType?: "agent" | "workflow" | "tool";
+  text?: string;
+  streamType?: "text" | "reasoning";
+  toolCallId?: string;
+  toolName?: string;
+  error?: string;
+  depth?: number;
+};
+type ChatMessage = UIMessage<{ stream_event: StreamEventPayload }>;
+type MessagePart = ChatMessage["parts"][number];
 type TextPart = Extract<MessagePart, { type: "text" }>;
 type ReasoningPart = Extract<MessagePart, { type: "reasoning" }>;
 type SourceUrlPart = Extract<MessagePart, { type: "source-url" }>;
 type RenderableToolPart = ToolUIPart | DynamicToolUIPart;
+type StreamEventPart = {
+  type: "data-stream_event";
+  id?: string;
+  data: StreamEventPayload;
+};
+type AgentActivity = {
+  id: string;
+  name: string;
+  status: "pending" | "done" | "error";
+  text: string;
+  thinking: string;
+  toolEvents: string[];
+};
 
 export function ChatPanel({ symbol, interval }: ChatPanelProps) {
   const [input, setInput] = useState("");
   const [isOpen, setIsOpen] = useState(false);
   const chatId = `trading-chat-${symbol}-${interval}`;
-  const { clearError, error, messages, sendMessage, status, stop } = useChat({
+  const { clearError, error, messages, sendMessage, status, stop } = useChat<ChatMessage>({
     id: chatId,
     transport: new DefaultChatTransport({
       api: "/api/chat",
@@ -117,53 +154,66 @@ export function ChatPanel({ symbol, interval }: ChatPanelProps) {
   function handleAttachmentAction() {}
 
   const isStreaming = status === "submitted" || status === "streaming";
+  const hasMessages = messages.length > 0;
 
   return (
     <div className="fixed inset-x-3 bottom-3 z-30 flex flex-col items-end gap-3 md:inset-x-auto md:bottom-5 md:right-5">
       {isOpen ? (
         <div
-          className="relative flex w-full min-h-0 overflow-hidden rounded-[30px] border border-white/10 bg-[linear-gradient(180deg,rgba(12,16,22,0.96)_0%,rgba(9,13,18,0.98)_100%)] shadow-[0_24px_80px_rgba(0,0,0,0.42)] backdrop-blur-xl animate-in fade-in-0 zoom-in-95 slide-in-from-bottom-2 duration-200"
+          className="relative flex w-full min-h-0 overflow-hidden rounded-[30px] border border-white/7 bg-[linear-gradient(180deg,rgba(13,18,24,0.88)_0%,rgba(10,14,19,0.95)_100%)] shadow-[0_28px_90px_rgba(0,0,0,0.46)] backdrop-blur-2xl animate-in fade-in-0 zoom-in-95 slide-in-from-bottom-2 duration-200"
           style={{
-            maxWidth: "min(1080px, calc(100vw - 1.5rem))",
-            width: "min(1080px, calc(100vw - 1.5rem))",
-            height: "min(720px, calc(100dvh - 6rem))",
-            maxHeight: "calc(100dvh - 6rem)",
+            maxWidth: "min(760px, calc(100vw - 1.5rem))",
+            width: "min(760px, calc(100vw - 1.5rem))",
+            height: "min(760px, calc(100dvh - 5rem))",
+            maxHeight: "calc(100dvh - 5rem)",
           }}
         >
           <div className="pointer-events-none absolute inset-0">
-            <div className="absolute left-[-10%] top-[-12%] h-56 w-56 rounded-full bg-[radial-gradient(circle,rgba(201,100,66,0.12),transparent_68%)] blur-3xl" />
-            <div className="absolute right-[-10%] top-[10%] h-64 w-64 rounded-full bg-[radial-gradient(circle,rgba(70,84,104,0.2),transparent_70%)] blur-3xl" />
+            <div className="absolute left-[-14%] top-[-10%] h-56 w-56 rounded-full bg-[radial-gradient(circle,rgba(201,100,66,0.13),transparent_68%)] blur-3xl" />
+            <div className="absolute right-[-12%] top-[8%] h-72 w-72 rounded-full bg-[radial-gradient(circle,rgba(81,104,132,0.18),transparent_72%)] blur-3xl" />
+            <div className="absolute inset-x-0 top-0 h-28 bg-gradient-to-b from-white/[0.03] to-transparent" />
           </div>
 
           <div className="relative flex min-h-0 flex-1 flex-col">
-            <div className="px-4 pb-2 pt-4 md:px-6 md:pt-5">
-              <div className="flex items-center justify-between gap-4">
-                <div className="flex items-center gap-2">
-                  <Badge className="rounded-full border border-[#9a6148]/20 bg-[#241d19] px-2.5 text-[10px] uppercase tracking-[0.18em] text-[#d4a588] shadow-none">
-                    Claude Style
-                  </Badge>
+            <div className="px-5 pb-3 pt-5 md:px-6 md:pb-4 md:pt-6">
+              <div className="flex items-start justify-between gap-4">
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <span className="rounded-full bg-[#1f1814] px-2.5 py-1 text-[10px] uppercase tracking-[0.2em] text-[#ca9a81]">
+                      Trading Chat
+                    </span>
+                    <span className="text-[10px] uppercase tracking-[0.18em] text-[#5d6876]">
+                      {symbol} · {interval}
+                    </span>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-lg font-medium tracking-[-0.03em] text-[#f3eee5]">
+                      交易研究对话
+                    </p>
+                    <p className="text-sm text-[#7f8a98]">
+                      直接问方向、触发条件、失效位，系统会按当前图表周期分析。
+                    </p>
+                  </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <Button
-                    type="button"
-                    size="icon-sm"
-                    variant="ghost"
-                    aria-label="关闭分析台"
-                    className="rounded-full border border-white/10 bg-white/5 text-[#8d97a5] hover:bg-white/10 hover:text-[#f2f4f8]"
-                    onClick={() => setIsOpen(false)}
-                  >
-                    <XIcon className="size-4" />
-                  </Button>
-                </div>
+                <Button
+                  type="button"
+                  size="icon-sm"
+                  variant="ghost"
+                  aria-label="关闭分析台"
+                  className="rounded-full bg-white/5 text-[#8d97a5] hover:bg-white/10 hover:text-[#f2f4f8]"
+                  onClick={() => setIsOpen(false)}
+                >
+                  <XIcon className="size-4" />
+                </Button>
               </div>
             </div>
 
-            <div className="flex min-h-0 flex-1 flex-col gap-4 px-3 pb-3 md:px-4 md:pb-4">
-              <div className="relative min-h-0 flex-1 overflow-hidden rounded-[24px] border border-white/8 bg-[linear-gradient(180deg,#0a1016_0%,#0b1117_70%,#0c1319_100%)]">
+            <div className="flex min-h-0 flex-1 flex-col gap-3 px-3 pb-3 md:px-4 md:pb-4">
+              <div className="relative min-h-0 flex-1 overflow-hidden rounded-[28px] bg-[linear-gradient(180deg,rgba(14,19,25,0.82)_0%,rgba(10,14,19,0.7)_100%)]">
                 <PromptInputProvider>
                   <Conversation className="size-full">
-                    <ConversationContent className="bg-transparent px-4 py-5 md:px-6 md:py-6">
-                      {messages.length > 0 ? (
+                    <ConversationContent className="bg-transparent px-5 py-5 md:px-6 md:py-6">
+                      {hasMessages ? (
                         messages.map((message, index) => (
                           <ChatMessageItem
                             key={message.id}
@@ -172,23 +222,25 @@ export function ChatPanel({ symbol, interval }: ChatPanelProps) {
                             message={message}
                           />
                         ))
-                      ) : null}
+                      ) : (
+                        <ChatEmptyState symbol={symbol} interval={interval} />
+                      )}
                     </ConversationContent>
                     <ConversationScrollButton />
                   </Conversation>
                 </PromptInputProvider>
-                <div className="pointer-events-none absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-[#0c1319] via-[#0c1319]/78 to-transparent" />
+                <div className="pointer-events-none absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-[rgba(9,13,18,0.72)] via-[rgba(9,13,18,0.18)] to-transparent" />
               </div>
 
               {error ? (
-                <p className="rounded-[18px] border border-amber-500/20 bg-amber-500/10 px-3 py-2 text-sm text-amber-200">
+                <p className="rounded-[18px] bg-amber-500/10 px-3 py-2 text-sm text-amber-200">
                   {error.message}
                 </p>
               ) : null}
 
-              <div className="space-y-2">
+              <div className="rounded-[24px] bg-[linear-gradient(180deg,rgba(20,27,35,0.9)_0%,rgba(16,22,29,0.92)_100%)] shadow-[0_12px_40px_rgba(0,0,0,0.22)]">
                 <PromptInput
-                  className="rounded-2xl border border-white/8 bg-[linear-gradient(180deg,#121920_0%,#0f151c_100%)] shadow-[0_0_0_1px_rgba(255,255,255,0.03),0_16px_36px_rgba(0,0,0,0.28)] transition-colors hover:border-white/12"
+                  className="rounded-[24px] bg-transparent shadow-none transition-colors"
                   onSubmit={(event) => {
                     event.preventDefault();
                     void submit(input);
@@ -198,8 +250,8 @@ export function ChatPanel({ symbol, interval }: ChatPanelProps) {
                     <PromptInputTextarea
                       value={input}
                       onChange={(event) => setInput(event.currentTarget.value)}
-                      placeholder="Reply to Trading Chat..."
-                      className="min-h-[108px] bg-transparent px-4 py-4 text-[15px] leading-7 text-[#eef2f6] placeholder:text-[#6d7886]"
+                      placeholder="问我：现在更适合看多、看空，还是观望？"
+                      className="min-h-[124px] bg-transparent px-5 py-4 text-[15px] leading-7 text-[#eef2f6] placeholder:text-[#667281]"
                       onKeyDown={(event) => {
                         if (event.key === "Enter" && !event.shiftKey) {
                           event.preventDefault();
@@ -209,13 +261,13 @@ export function ChatPanel({ symbol, interval }: ChatPanelProps) {
                     />
                   </PromptInputBody>
 
-                  <PromptInputFooter className="flex-wrap items-center gap-3 border-t border-black/5 p-3">
+                  <PromptInputFooter className="flex-wrap items-center gap-3 border-t border-white/6 px-4 py-3">
                     <PromptInputTools className="gap-2">
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                           <PromptInputButton
                             variant="outline"
-                            className="rounded-lg border-white/10 bg-white/5 px-2.5 text-[#96a0ad] hover:bg-white/10 hover:text-[#f2f4f8]"
+                            className="rounded-full bg-white/5 px-2.5 text-[#96a0ad] hover:bg-white/10 hover:text-[#f2f4f8]"
                           >
                             <PlusIcon className="size-4" />
                             <span className="sr-only">添加附件</span>
@@ -223,7 +275,7 @@ export function ChatPanel({ symbol, interval }: ChatPanelProps) {
                         </DropdownMenuTrigger>
                         <DropdownMenuContent
                           align="start"
-                          className="w-52 min-w-52 rounded-2xl border-white/10 bg-[#121920] p-1 text-[#e6ebf2] shadow-[0_18px_40px_rgba(0,0,0,0.35)]"
+                          className="w-52 min-w-52 rounded-2xl bg-[#121920] p-1 text-[#e6ebf2] shadow-[0_18px_40px_rgba(0,0,0,0.35)]"
                         >
                           <DropdownMenuItem onClick={() => handleAttachmentAction()}>
                             <FileIcon className="mr-2 size-4" />
@@ -246,7 +298,7 @@ export function ChatPanel({ symbol, interval }: ChatPanelProps) {
 
                       <PromptInputButton
                         variant="outline"
-                        className="rounded-lg border-white/10 bg-white/5 px-2.5 text-[#96a0ad] hover:bg-white/10 hover:text-[#f2f4f8]"
+                        className="rounded-full bg-white/5 px-2.5 text-[#96a0ad] hover:bg-white/10 hover:text-[#f2f4f8]"
                       >
                         <Settings2Icon className="size-4" />
                         <span className="sr-only">设置</span>
@@ -258,14 +310,14 @@ export function ChatPanel({ symbol, interval }: ChatPanelProps) {
                         <PromptInputStop
                           onClick={() => stop()}
                           aria-label="停止输出"
-                          className="rounded-lg border-white/10 bg-white/5 px-2.5 text-[#96a0ad] hover:bg-white/10 hover:text-[#f2f4f8]"
+                          className="rounded-full bg-white/5 px-2.5 text-[#96a0ad] hover:bg-white/10 hover:text-[#f2f4f8]"
                         />
                       ) : null}
 
                       <PromptInputSubmit
                         status={status}
                         disabled={!input.trim() || isStreaming}
-                        className="rounded-lg bg-[#c96442] text-white shadow-none hover:bg-[#bd5937]"
+                        className="rounded-full bg-[#c96442] px-3 text-white shadow-none hover:bg-[#bd5937]"
                       >
                         <ArrowUpIcon className="-translate-y-px size-4" />
                       </PromptInputSubmit>
@@ -283,7 +335,7 @@ export function ChatPanel({ symbol, interval }: ChatPanelProps) {
         size="default"
         variant="secondary"
         aria-label={isOpen ? "关闭聊天" : "打开聊天"}
-        className="h-auto rounded-[20px] border border-white/10 bg-[linear-gradient(180deg,rgba(15,21,29,0.94)_0%,rgba(11,16,22,0.98)_100%)] px-3 py-2.5 text-[#eef2f6] shadow-[0_12px_36px_rgba(0,0,0,0.35)] backdrop-blur-xl hover:bg-[#141b23]"
+        className="h-auto rounded-[22px] border border-white/8 bg-[linear-gradient(180deg,rgba(15,21,29,0.94)_0%,rgba(11,16,22,0.98)_100%)] px-3 py-2.5 text-[#eef2f6] shadow-[0_12px_36px_rgba(0,0,0,0.35)] backdrop-blur-xl hover:bg-[#141b23]"
         onClick={() => setIsOpen((value) => !value)}
       >
         <span className="flex h-10 w-10 items-center justify-center rounded-[14px] bg-white/6 text-[#96a0ad]">
@@ -291,7 +343,7 @@ export function ChatPanel({ symbol, interval }: ChatPanelProps) {
         </span>
         <span className="ml-3 flex flex-col items-start text-left">
           <span className="text-[10px] uppercase tracking-[0.22em] text-[#7d8795]">
-            Trading Chat 
+            Trading Chat
           </span>
           <span className="text-sm font-medium text-[#eef2f6]">
             {isOpen ? "收起聊天窗" : "打开聊天窗"}
@@ -302,12 +354,58 @@ export function ChatPanel({ symbol, interval }: ChatPanelProps) {
   );
 }
 
+function ChatEmptyState({
+  symbol,
+  interval,
+}: {
+  symbol: MarketSymbol;
+  interval: MarketInterval;
+}) {
+  return (
+    <div className="flex min-h-[420px] flex-col justify-between">
+      <div className="space-y-5">
+        <div className="max-w-[26rem] space-y-2">
+          <p className="text-[10px] uppercase tracking-[0.18em] text-[#8b6f61]">
+            Research Ready
+          </p>
+          <p className="text-2xl font-medium tracking-[-0.04em] text-[#f3eee5]">
+            用当前 {symbol} · {interval} 图表直接问交易问题
+          </p>
+          <p className="text-sm leading-7 text-[#7d8896]">
+            我会结合当前周期、多周期结构、衍生品和新闻上下文，给你更接近交易台口径的判断。
+          </p>
+        </div>
+
+        <div className="grid gap-3 md:grid-cols-2">
+          {[
+            "现在更适合看多、看空还是观望？",
+            "如果我要做 10 分钟事件合约，方向应该怎么选？",
+            "这个位置追多有没有胜率优势？",
+            "告诉我触发条件、失效位和风险点。",
+          ].map((item) => (
+            <div
+              key={item}
+              className="rounded-[20px] bg-white/[0.03] px-4 py-3 text-sm leading-6 text-[#cfd7e2]"
+            >
+              {item}
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="pt-8 text-xs uppercase tracking-[0.16em] text-[#586372]">
+        Live market context is attached automatically
+      </div>
+    </div>
+  );
+}
+
 function ChatMessageItem({
   message,
   isLastMessage,
   isStreaming,
 }: {
-  message: UIMessage;
+  message: ChatMessage;
   isLastMessage: boolean;
   isStreaming: boolean;
 }) {
@@ -321,6 +419,8 @@ function ChatMessageItem({
     (part): part is TextPart => part.type === "text",
   );
   const toolParts = message.parts.filter(isToolPart);
+  const streamEventParts = message.parts.filter(isStreamEventPart);
+  const agentActivities = buildAgentActivities(streamEventParts);
 
   const reasoningText = reasoningParts.map((part) => part.text).join("\n\n").trim();
   const assistantText = textParts.map((part) => part.text).join("\n\n").trim();
@@ -336,21 +436,33 @@ function ChatMessageItem({
     isLastMessage &&
     isStreaming &&
     !showReasoning;
+  const showAgentActivity =
+    message.role === "assistant" && isLastMessage && agentActivities.length > 0;
+  const hasVisibleContent =
+    sourceParts.length > 0 ||
+    showReasoning ||
+    showAgentActivity ||
+    textParts.some((part) => part.text.trim().length > 0) ||
+    showTypingState ||
+    toolParts.length > 0;
+
+  if (!hasVisibleContent) {
+    return null;
+  }
 
   return (
-    <Message from={message.role} className="gap-2">
+    <Message from={message.role} className="gap-3">
       <MessageContent
         className={cn(
           "border-0 bg-transparent p-0 shadow-none",
-          message.role === "user" &&
-            "max-w-[88%] rounded-2xl bg-[#141b23] px-3 py-3 text-[#eef2f6] shadow-[0_0_0_1px_rgba(255,255,255,0.04),0_8px_20px_rgba(0,0,0,0.18)]",
+          message.role === "assistant" && "max-w-[92%]",
         )}
       >
         {sourceParts.length > 0 ? (
           <Sources className="mb-4">
             <SourcesTrigger
               count={sourceParts.length}
-              className="border-white/10 bg-white/6 text-[#8f98a5]"
+              className="rounded-full bg-white/6 text-[#8f98a5]"
             />
             <SourcesContent className="mt-2">
               {sourceParts.map((part) => (
@@ -358,7 +470,7 @@ function ChatMessageItem({
                   key={`${message.id}-${part.sourceId}-${part.url}`}
                   href={part.url}
                   title={part.title ?? part.url}
-                  className="border-white/10 bg-white/6 text-[#dce3eb] hover:bg-white/10"
+                  className="bg-white/6 text-[#dce3eb] hover:bg-white/10"
                 />
               ))}
             </SourcesContent>
@@ -367,33 +479,29 @@ function ChatMessageItem({
 
         {showReasoning ? (
           <Reasoning
-            className="mb-4 border-l border-white/8 pl-3"
+            className="mb-5"
             isStreaming={isReasoningStreaming}
           >
             <ReasoningTrigger className="text-[#7f8996]" />
-            <ReasoningContent className="rounded-2xl bg-[#111820] px-3 py-2.5 text-[#8b95a3]">
+            <ReasoningContent className="rounded-[22px] bg-white/[0.035] px-4 py-3 text-[#8b95a3]">
               {reasoningText}
             </ReasoningContent>
           </Reasoning>
         ) : null}
 
-        <div className={cn("space-y-3", message.role === "user" && "flex gap-2 space-y-0")}>
-          {message.role === "user" ? (
-            <Avatar className="mt-0.5 size-7 outline outline-1 outline-black/8">
-              <AvatarImage
-                alt="User"
-                src="https://github.com/haydenbleasel.png"
-              />
-              <AvatarFallback>U</AvatarFallback>
-            </Avatar>
-          ) : null}
-          <div className="min-w-0 flex-1 space-y-3">
+        {showAgentActivity ? (
+          <div className="mb-5">
+            <AgentActivitySummary agents={agentActivities} />
+          </div>
+        ) : null}
+
+        <div className="min-w-0 space-y-4">
           {textParts.map((part, index) => (
             <MessageResponse
               key={`${message.id}-${index}`}
               className={cn(
-                "text-[15px] leading-7",
-                message.role === "user" ? "text-[#eef2f6]" : "text-[#e8edf3]",
+                "text-[15px] leading-8",
+                message.role === "user" ? "text-[#cfd7e2]" : "text-[#e8edf3]",
               )}
             >
               {part.text}
@@ -406,11 +514,10 @@ function ChatMessageItem({
               正在生成分析…
             </div>
           ) : null}
-          </div>
         </div>
 
         {toolParts.length > 0 ? (
-          <div className="mt-4 space-y-2">
+          <div className="mt-5 space-y-2.5">
             {toolParts.map((part) => (
               <ToolPartCard
                 key={`${message.id}-${part.toolCallId}-${part.state}`}
@@ -447,7 +554,7 @@ function ToolPartCard({ part }: { part: RenderableToolPart }) {
   const errorText = "errorText" in part ? part.errorText : null;
 
   return (
-    <div className="rounded-[20px] border border-white/8 bg-[#10171e] px-3 py-3 shadow-[0_0_0_1px_rgba(255,255,255,0.03)]">
+    <div className="rounded-[22px] bg-white/[0.035] px-4 py-3.5">
       <div className="flex items-start justify-between gap-3">
         <div>
           <p className="text-[10px] uppercase tracking-[0.18em] text-[#7f8996]">
@@ -459,18 +566,18 @@ function ToolPartCard({ part }: { part: RenderableToolPart }) {
         </div>
         <Badge
           variant="outline"
-          className={cn("rounded-full border px-2 py-0.5 text-[10px] uppercase tracking-[0.16em]", stateTone)}
+          className={cn("rounded-full px-2 py-0.5 text-[10px] uppercase tracking-[0.16em]", stateTone)}
         >
           {stateLabel}
         </Badge>
       </div>
 
-      <pre className="mt-3 overflow-x-auto rounded-2xl border border-white/8 bg-[#0b1117] px-3 py-2 text-[11px] leading-5 text-[#8b95a3]">
+      <pre className="mt-3 overflow-x-auto rounded-[18px] bg-black/20 px-3 py-2.5 text-[11px] leading-5 text-[#8b95a3]">
         {inputText}
       </pre>
 
       {outputText ? (
-        <pre className="mt-2 overflow-x-auto rounded-2xl border border-white/8 bg-[#121921] px-3 py-2 text-[11px] leading-5 text-[#dbe3ec]">
+        <pre className="mt-2 overflow-x-auto rounded-[18px] bg-white/[0.04] px-3 py-2.5 text-[11px] leading-5 text-[#dbe3ec]">
           {outputText}
         </pre>
       ) : null}
@@ -500,9 +607,97 @@ function isToolPart(part: MessagePart): part is RenderableToolPart {
   return part.type === "dynamic-tool" || part.type.startsWith("tool-");
 }
 
+function isStreamEventPart(part: MessagePart): part is StreamEventPart {
+  return part.type === "data-stream_event";
+}
+
+function AgentActivitySummary({ agents }: { agents: AgentActivity[] }) {
+  const completed = agents.filter((agent) => agent.status === "done").length;
+  const failed = agents.filter((agent) => agent.status === "error").length;
+  const active = agents.filter((agent) => agent.status === "pending").length;
+  const labels = agents.map((agent) => agent.name).join(" / ");
+  const latestUpdate = agents
+    .flatMap((agent) => agent.toolEvents.map((item) => `${agent.name}: ${item}`))
+    .at(-1);
+
+  return (
+    <div className="space-y-2 rounded-[20px] bg-white/[0.025] px-4 py-3">
+      <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.16em] text-[#8b6f61]">
+        <span>Research Agents</span>
+        <span className="text-[#5f6976]">{labels}</span>
+      </div>
+      <div className="flex flex-wrap items-center gap-2 text-xs text-[#98a3b1]">
+        <span>{agents.length} 个研究席位</span>
+        <span>{completed} 已完成</span>
+        {active > 0 ? <span>{active} 进行中</span> : null}
+        {failed > 0 ? <span className="text-rose-300">{failed} 异常</span> : null}
+      </div>
+      {latestUpdate ? <p className="text-xs text-[#7f8996]">{latestUpdate}</p> : null}
+    </div>
+  );
+}
+
 function getToolName(part: RenderableToolPart) {
   const rawName = part.type === "dynamic-tool" ? part.toolName : part.type.replace(/^tool-/, "");
   return rawName.replace(/[-_]+/g, " ");
+}
+
+function buildAgentActivities(parts: StreamEventPart[]): AgentActivity[] {
+  const agents = new Map<string, AgentActivity>();
+
+  for (const part of parts) {
+    const event = part.data;
+    const agentId = event.targetId ?? event.agentId;
+    if (!agentId) continue;
+
+    const current =
+      agents.get(agentId) ??
+      {
+        id: agentId,
+        name: event.targetName ?? event.agentId ?? agentId,
+        status: "pending" as const,
+        text: "",
+        thinking: "",
+        toolEvents: [],
+      };
+
+    current.name = event.targetName ?? current.name;
+
+    if (event.eventName === "agent.handoff.started") {
+      current.status = "pending";
+    }
+
+    if (event.eventName === "agent.handoff.completed") {
+      current.status = current.status === "error" ? "error" : "done";
+    }
+
+    if (event.eventName === "agent.stream.delta" && event.text) {
+      if (event.streamType === "reasoning") {
+        current.thinking += event.text;
+      } else {
+        current.text += event.text;
+      }
+    }
+
+    if (event.eventName === "tool.call.started") {
+      current.toolEvents.push(`工具 ${event.toolName ?? "unknown"} 运行中`);
+    }
+
+    if (event.eventName === "tool.call.completed") {
+      current.toolEvents.push(`工具 ${event.toolName ?? "unknown"} 已完成`);
+    }
+
+    if (event.eventName === "tool.call.failed") {
+      current.status = "error";
+      current.toolEvents.push(
+        `工具 ${event.toolName ?? "unknown"} 失败${event.error ? `: ${event.error}` : ""}`,
+      );
+    }
+
+    agents.set(agentId, current);
+  }
+
+  return [...agents.values()];
 }
 
 function formatToolState(state: RenderableToolPart["state"]) {
@@ -535,18 +730,18 @@ function formatToolState(state: RenderableToolPart["state"]) {
 
 function getToolStateTone(state: RenderableToolPart["state"]) {
   if (state === "output-available") {
-    return "border-emerald-500/20 bg-emerald-500/10 text-emerald-200";
+    return "bg-emerald-500/10 text-emerald-200";
   }
 
   if (state === "output-error" || state === "output-denied") {
-    return "border-rose-500/20 bg-rose-500/10 text-rose-200";
+    return "bg-rose-500/10 text-rose-200";
   }
 
   if (state === "approval-requested") {
-    return "border-amber-500/20 bg-amber-500/10 text-amber-200";
+    return "bg-amber-500/10 text-amber-200";
   }
 
-  return "border-white/8 bg-white/[0.04] text-slate-300";
+  return "bg-white/[0.05] text-slate-300";
 }
 
 function formatUnknown(value: unknown) {

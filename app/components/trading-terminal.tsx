@@ -2,6 +2,7 @@
 
 import dynamic from "next/dynamic";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { SparklesIcon } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
@@ -33,6 +34,16 @@ const RANGE_OPTIONS = [
 ] as const;
 
 type TimeRangeKey = (typeof RANGE_OPTIONS)[number]["key"];
+type EventContractResult = {
+  stance: "long" | "short" | "wait";
+  label: "看多" | "看空" | "观望";
+  confidence: number;
+  contractQuestion: string;
+  timeHorizon: string;
+  thesis: string;
+  drivers: string[];
+  risks: string[];
+};
 
 export function TradingTerminal() {
   const [symbol, setSymbol] = useState<MarketSymbol>("BTCUSDT");
@@ -43,6 +54,9 @@ export function TradingTerminal() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isLoadingMoreHistory, setIsLoadingMoreHistory] = useState(false);
   const [historyExhausted, setHistoryExhausted] = useState(false);
+  const [eventContractResult, setEventContractResult] = useState<EventContractResult | null>(null);
+  const [eventContractLoading, setEventContractLoading] = useState(false);
+  const [eventContractError, setEventContractError] = useState<string | null>(null);
 
   // 实时 tick 直接调用 chart 的 update()，完全绕过 React state，避免每秒全量 setData
   const chartUpdateRef = useRef<((candle: Candle) => void) | null>(null);
@@ -103,7 +117,7 @@ export function TradingTerminal() {
     return () => {
       cancelled = true;
     };
-  }, [datasetKey]);
+  }, [datasetKey, interval, symbol, timeRange]);
 
   async function loadMoreHistory() {
     const requestDatasetKey = activeDatasetKeyRef.current;
@@ -345,6 +359,39 @@ export function TradingTerminal() {
   }, [candles]);
   const [searchOpen, setSearchOpen] = useState(false);
 
+  async function analyzeEventContract() {
+    setEventContractLoading(true);
+    setEventContractError(null);
+
+    try {
+      const response = await fetch("/api/event-contract", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          symbol,
+          interval,
+        }),
+      });
+
+      const payload = (await response.json()) as {
+        error?: string;
+        result?: EventContractResult;
+      };
+
+      if (!response.ok || !payload.result) {
+        throw new Error(payload.error ?? "事件合约分析失败。");
+      }
+
+      setEventContractResult(payload.result);
+    } catch (error) {
+      setEventContractError(error instanceof Error ? error.message : "事件合约分析失败。");
+    } finally {
+      setEventContractLoading(false);
+    }
+  }
+
   return (
     <div className="fixed inset-0 overflow-hidden bg-[#0f141a]">
       <div className="pointer-events-none absolute inset-0">
@@ -438,6 +485,8 @@ export function TradingTerminal() {
             onValueChange={(value) => {
               if (value) {
                 setTimeRange(value as TimeRangeKey);
+                setEventContractResult(null);
+                setEventContractError(null);
               }
             }}
             size="sm"
@@ -457,8 +506,37 @@ export function TradingTerminal() {
             ))}
           </ToggleGroup>
           <div className="mx-2 h-5 w-px shrink-0 bg-white/10" />
-          <IntervalSelector interval={interval} onIntervalChange={setInterval} />
+          <IntervalSelector
+            interval={interval}
+            onIntervalChange={(nextInterval) => {
+              setInterval(nextInterval);
+              setEventContractResult(null);
+              setEventContractError(null);
+            }}
+          />
+          <div className="mx-2 h-5 w-px shrink-0 bg-white/10" />
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={() => void analyzeEventContract()}
+            disabled={eventContractLoading}
+            className="h-8 rounded-[14px] bg-[#1a2028] px-3 text-[11px] font-medium tracking-[0.04em] text-[#e9ded1] hover:bg-[#232b35] hover:text-white disabled:opacity-60"
+          >
+            <SparklesIcon className="mr-1.5 size-3.5" />
+            {eventContractLoading ? "分析中..." : "事件合约"}
+          </Button>
           </div>
+
+          {eventContractResult || eventContractError ? (
+            <div className="mt-2 w-full max-w-[24rem] rounded-[22px] bg-[#111821]/92 px-4 py-3 shadow-[0_16px_48px_rgba(0,0,0,0.34)] backdrop-blur-xl">
+              {eventContractError ? (
+                <p className="text-sm text-amber-300">{eventContractError}</p>
+              ) : eventContractResult ? (
+                <EventContractCard result={eventContractResult} symbol={displaySymbol} />
+              ) : null}
+            </div>
+          ) : null}
         </div>
       </div>
 
@@ -478,7 +556,11 @@ export function TradingTerminal() {
       <MarketSelector
         open={searchOpen}
         symbol={symbol}
-        onSymbolChange={setSymbol}
+        onSymbolChange={(nextSymbol) => {
+          setSymbol(nextSymbol);
+          setEventContractResult(null);
+          setEventContractError(null);
+        }}
         onClose={() => setSearchOpen(false)}
       />
 
@@ -545,4 +627,66 @@ function formatDisplaySymbol(symbol: MarketSymbol) {
   }
 
   return `${match[1]}/${match[2]}`;
+}
+
+function EventContractCard({
+  result,
+  symbol,
+}: {
+  result: EventContractResult;
+  symbol: string;
+}) {
+  return (
+    <div className="space-y-3">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <p className="text-[10px] uppercase tracking-[0.18em] text-[#b79481]">
+            Event Contract
+          </p>
+          <p className="mt-1 text-sm font-medium text-[#f3eee5]">{symbol}</p>
+        </div>
+        <span className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${getEventContractTone(result.stance)}`}>
+          {result.label}
+        </span>
+      </div>
+
+      <div className="space-y-1">
+        <p className="text-sm leading-6 text-[#e8edf3]">{result.contractQuestion}</p>
+        <div className="flex items-center gap-3 text-xs text-[#8e99a8]">
+          <span>{result.timeHorizon}</span>
+          <span>置信度 {result.confidence}%</span>
+        </div>
+      </div>
+
+      <p className="text-sm leading-6 text-[#d8e0ea]">{result.thesis}</p>
+
+      <div className="space-y-1.5">
+        {result.drivers.map((item) => (
+          <p key={item} className="text-xs leading-5 text-[#98a4b2]">
+            {item}
+          </p>
+        ))}
+      </div>
+
+      <div className="space-y-1">
+        {result.risks.map((item) => (
+          <p key={item} className="text-xs leading-5 text-[#b99585]">
+            风险: {item}
+          </p>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function getEventContractTone(stance: EventContractResult["stance"]) {
+  if (stance === "long") {
+    return "bg-emerald-500/12 text-emerald-200";
+  }
+
+  if (stance === "short") {
+    return "bg-rose-500/12 text-rose-200";
+  }
+
+  return "bg-amber-500/12 text-amber-200";
 }
